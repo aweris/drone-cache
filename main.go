@@ -8,8 +8,8 @@ import (
 	"github.com/meltwater/drone-cache/cache"
 	"github.com/meltwater/drone-cache/cache/backend"
 	"github.com/meltwater/drone-cache/internal"
-	"github.com/meltwater/drone-cache/metadata"
-	"github.com/meltwater/drone-cache/plugin"
+	"github.com/meltwater/drone-cache/internal/metadata"
+	"github.com/meltwater/drone-cache/internal/plugin"
 
 	"github.com/go-kit/kit/log/level"
 	"github.com/urfave/cli"
@@ -501,6 +501,7 @@ func run(c *cli.Context) error {
 	if c.Bool("exit-code") {
 		// If it is exit-code enabled, always exit with error.
 		level.Warn(logger).Log("msg", "silent fails disabled, exiting with status code on error")
+
 		return err
 	}
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/meltwater/drone-cache/cache"
 	"github.com/meltwater/drone-cache/cache/backend"
-	"github.com/meltwater/drone-cache/metadata"
+	"github.com/meltwater/drone-cache/internal/metadata"
 
 	"github.com/go-kit/kit/log"
 	"github.com/minio/minio-go"

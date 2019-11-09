@@ -14,9 +14,12 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/meltwater/drone-cache/metadata"
+	"github.com/meltwater/drone-cache/internal/metadata"
 )
 
+// TODO: Eliminate package level var
+// - Introduce new type
+// - Use logger
 var funcMap = template.FuncMap{
 	"checksum": func(path string) string {
 		absPath, err := filepath.Abs(filepath.Clean(path))

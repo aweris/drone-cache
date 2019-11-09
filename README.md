@@ -96,7 +96,7 @@ USAGE:
    drone-cache [global options] command [command options] [arguments...]
 
 VERSION:
-   v1.0.4-18-g99c5e76-dirty
+   v1.0.4-18-g5fc2888-dirty
 
 COMMANDS:
      help, h  Shows a list of commands or help for one command

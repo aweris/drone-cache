@@ -15,7 +15,10 @@ the requirements below.
 ## Pull Request Process
 
 0. Check out [Pull Request Checklist](#pull-request-checklist), ensure you have fulfilled each step.
-1. Check out [Uber Style Guide](https://github.com/uber-go/guide/blob/master/style.md), project tries to follow it, ensure you have fulfilled it as much as possible.
+1. Check out guidelines below, project tries to follow these, ensure you have fulfilled them as much as possible.
+    * [Effective Go](https://golang.org/doc/effective_go.html)
+    * [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+    * [Uber Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
 2. Ensure any install or build dependencies are removed before the end of the layer when doing a
    build.
 3. Please ensure the [README](README.md) and [DOCS](./DOCS.md) are up-to-date with details of changes to the command-line interface,

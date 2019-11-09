@@ -10,8 +10,8 @@ import (
 
 	"github.com/meltwater/drone-cache/cache"
 	"github.com/meltwater/drone-cache/cache/backend"
-	"github.com/meltwater/drone-cache/metadata"
-	"github.com/meltwater/drone-cache/plugin/cachekey"
+	cachekey "github.com/meltwater/drone-cache/cache/key"
+	"github.com/meltwater/drone-cache/internal/metadata"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -159,7 +159,7 @@ func processRebuild(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDir
 	return nil
 }
 
-// processRestore the local environment from the remote cache
+// processRestore the local environment from the remote cache.
 func processRestore(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDirs []string, m metadata.Metadata) error {
 	now := time.Now()
 	branch := m.Commit.Branch
@@ -185,7 +185,7 @@ func processRestore(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDir
 
 // Helpers
 
-// cacheKey generates key from given template as parameter or fallbacks hash
+// cacheKey generates key from given template as parameter or fallbacks hash.
 func cacheKey(l log.Logger, p metadata.Metadata, cacheKeyTmpl, mount, branch string) (string, error) {
 	level.Info(l).Log("msg", "using provided cache key template")
 

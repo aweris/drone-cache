@@ -10,24 +10,23 @@ GOLANGCI_LINT_VERSION=v1.21.0
 GOLANGCI_LINT_BIN=$(GOPATH)/bin/golangci-lint
 EMBEDMD_BIN=$(GOPATH)/bin/embedmd
 GOTEST_BIN=$(GOPATH)/bin/gotest
+GORELEASER_VERSION=v0.120
+GORELEASER_BIN=$(GOPATH)/bin/goreleaser
+LICHE_BIN=$(GOPATH)/bin/liche
 
 .PHONY: default all
 default: drone-cache
 all: drone-cache
 
 drone-cache: vendor main.go $(wildcard *.go) $(wildcard */*.go)
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o $@ .
-
-.PHONY: build
-build: vendor main.go $(wildcard *.go) $(wildcard */*.go)
-	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o drone-cache .
+	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o $@ .
 
 .PHONY: release
-release: build
+release: drone-cache $(GORELEASER_BIN)
 	goreleaser release --rm-dist
 
 .PHONY: snapshot
-snapshot:
+snapshot: drone-cache $(GORELEASER_BIN)
 	goreleaser release --skip-publish --rm-dist --snapshot
 
 .PHONY: clean
@@ -35,20 +34,22 @@ clean:
 	rm -f drone-cache
 	rm -rf target
 
-tmp/help.txt: clean build
+tmp/help.txt: drone-cache
 	mkdir -p tmp
 	./drone-cache --help &> tmp/help.txt
 
 README.md: tmp/help.txt
 	embedmd -w README.md
 
-tmp/docs.txt: clean build
-	mkdir -p tmp
-	# ./drone-cache --help &> tmp/help.txt
+tmp/docs.txt: drone-cache
 	@echo "IMPLEMENT ME"
 
 DOCS.md: tmp/docs.txt
 	embedmd -w DOCS.md
+
+docs: clean README.md DOCS.md ${LICHE_BIN}
+	@$(LICHE_BIN) --recursive docs --document-root .
+	@$(LICHE_BIN) --exclude "(goreportcard.com)" --document-root . *.md
 
 .PHONY: vendor
 vendor:
@@ -113,3 +114,10 @@ $(GOLANGCI_LINT_BIN):
 	curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh \
 		| sed -e '/install -d/d' \
 		| sh -s -- -b $(GOPATH)/bin $(GOLANGCI_LINT_VERSION)
+
+$(GORELEASER_BIN):
+	curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh \
+		| VERSION=${GORELEASER_VERSION} sh -s -- -b $(GOPATH)/bin $(GORELEASER_BIN)
+
+${LICHE_BIN}:
+	GO111MODULE=on go get -u github.com/raviqqe/liche

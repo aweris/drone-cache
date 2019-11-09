@@ -188,7 +188,7 @@ volumes:
 
 **With custom cache key template**
 
-See [cache key templates](/meltwater/drone-cache#using-cache-key-templates) section for further information and to learn about syntax.
+See [cache key templates](#using-cache-key-templates) section for further information and to learn about syntax.
 
 ```yaml
 kind: pipeline

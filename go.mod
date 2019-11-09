@@ -19,7 +19,8 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20181108003508-044398e4856c // indirect
 	github.com/urfave/cli v1.20.0
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
-	golang.org/x/sys v0.0.0-20191008105621-543471e840be // indirect
+	golang.org/x/net v0.0.0-20191109021931-daa7c04131f5 // indirect
+	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd // indirect
 	google.golang.org/api v0.9.0
 	gopkg.in/ini.v1 v1.41.0 // indirect
 )

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/meltwater/drone-cache/metadata"
+	"github.com/meltwater/drone-cache/internal/metadata"
 )
 
 var mockFuncMap = template.FuncMap{
