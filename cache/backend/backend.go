@@ -22,6 +22,14 @@ import (
 	"google.golang.org/api/option"
 )
 
+const (
+	FileSystem = "filesystem"
+	S3         = "s3"
+	SFTP       = "sftp"
+	Azure      = "azure"
+	GCS        = "gcs"
+)
+
 // S3Config is a structure to store S3  backend configuration
 type S3Config struct {
 	// Indicates the files ACL, which should be one
@@ -81,7 +89,7 @@ func InitializeS3Backend(l log.Logger, c S3Config, debug bool) (cache.Backend, e
 		level.Warn(l).Log("msg", "aws key and/or Secret not provided (falling back to anonymous credentials)")
 	}
 
-	level.Debug(l).Log("msg", "s3 backend", "config", fmt.Sprintf("%+v", c))
+	level.Debug(l).Log("msg", "s3 backend", "config", fmt.Sprintf("%#v", c))
 
 	if debug {
 		awsConf.WithLogLevel(aws.LogDebugWithHTTPBody)
@@ -140,7 +148,7 @@ func InitializeFileSystemBackend(l log.Logger, c FileSystemConfig, debug bool) (
 		return nil, fmt.Errorf("make sure volume is mounted, <%s> as cache root %w", c.CacheRoot, err)
 	}
 
-	level.Debug(l).Log("msg", "filesystem backend", "config", fmt.Sprintf("%+v", c))
+	level.Debug(l).Log("msg", "filesystem backend", "config", fmt.Sprintf("%#v", c))
 
 	return newFileSystem(c.CacheRoot), nil
 }
@@ -178,7 +186,7 @@ func InitializeSFTPBackend(l log.Logger, c SFTPConfig, debug bool) (cache.Backen
 		return nil, fmt.Errorf("unable to connect to ssh with sftp protocol %w", err)
 	}
 
-	level.Debug(l).Log("msg", "sftp backend", "config", fmt.Sprintf("%+v", c))
+	level.Debug(l).Log("msg", "sftp backend", "config", fmt.Sprintf("%#v", c))
 
 	return newSftpBackend(sftpClient, c.CacheRoot), nil
 }
@@ -231,8 +239,8 @@ func readPublicKeyFile(file string) (ssh.AuthMethod, error) {
 	return ssh.PublicKeys(key), nil
 }
 
-// CloudStorageConfig is a structure to store Cloud Storage backend configuration
-type CloudStorageConfig struct {
+// GCSConfig is a structure to store Cloud Storage backend configuration
+type GCSConfig struct {
 	Bucket     string
 	ACL        string
 	Encryption string
@@ -241,7 +249,7 @@ type CloudStorageConfig struct {
 }
 
 // InitializeGCSBackend creates a Cloud Storage backend
-func InitializeGCSBackend(l log.Logger, c CloudStorageConfig, debug bool) (cache.Backend, error) {
+func InitializeGCSBackend(l log.Logger, c GCSConfig, debug bool) (cache.Backend, error) {
 	var opts []option.ClientOption
 	if c.APIKey != "" {
 		opts = append(opts, option.WithAPIKey(c.APIKey))

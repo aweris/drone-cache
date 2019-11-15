@@ -30,7 +30,7 @@ drone-cache
 vendor
 target
 bin
-testcache
+testdata
 backup
 tmp
 TODO.md

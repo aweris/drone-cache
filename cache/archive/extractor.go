@@ -24,6 +24,7 @@ func NewExtractor(format string) *Extractor {
 // ExtractFrom extracts content from given reader and writes it to disk.
 func (r *Extractor) ExtractFrom(rdr io.Reader) (int64, error) {
 	var written int64
+
 	tr := tar.NewReader(rdr)
 
 	switch r.format {
@@ -90,7 +91,7 @@ func (r *Extractor) ExtractFrom(rdr io.Reader) (int64, error) {
 // Close closes the Extractor.
 func (r *Extractor) Close() error {
 	if r.gzr != nil {
-		r.gzr.Close()
+		return r.gzr.Close()
 	}
 
 	return nil

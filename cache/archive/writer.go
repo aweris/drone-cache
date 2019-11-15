@@ -55,12 +55,12 @@ func (w *Writer) WriteTo(wrt io.Writer) (int64, error) {
 
 // Close closes the Writer.
 func (w *Writer) Close() error {
-	if w.gw != nil {
-		w.gw.Close()
-	}
-
 	if w.tw != nil {
 		return w.tw.Close()
+	}
+
+	if w.gw != nil {
+		return w.gw.Close()
 	}
 
 	return nil
@@ -104,6 +104,10 @@ func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(stri
 				return fmt.Errorf("write file to archive %w", err)
 			}
 		}
+
+		// TODO:
+		// *written += h.FileInfo().Size()
+		// *written += fi.Size()
 
 		return nil
 	}

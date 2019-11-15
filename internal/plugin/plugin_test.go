@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,7 +45,9 @@ func TestRebuild(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 	file.Sync()
@@ -64,7 +67,7 @@ func TestRebuild(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plugin := newTestPlugin("s3", true, false, []string{dirPath}, "", "")
+	plugin := newTestPlugin(backend.S3, true, false, []string{dirPath}, "", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -86,7 +89,9 @@ func TestRebuildSkipSymlinks(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 	file.Sync()
@@ -106,7 +111,7 @@ func TestRebuildSkipSymlinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plugin := newTestPlugin("s3", true, false, []string{"./tmp/1"}, "", "")
+	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "", "tar")
 	plugin.Config.SkipSymlinks = true
 
 	if err := plugin.Exec(); err != nil {
@@ -127,13 +132,15 @@ func TestRebuildWithCacheKey(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 	file.Sync()
 	file.Close()
 
-	plugin := newTestPlugin("s3", true, false, []string{"./tmp/1"}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "")
+	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -153,13 +160,15 @@ func TestRebuildWithGzip(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 	file.Sync()
 	file.Close()
 
-	plugin := newTestPlugin("s3", true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -179,13 +188,15 @@ func TestRebuildWithFilesystem(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 	file.Sync()
 	file.Close()
 
-	plugin := newTestPlugin("filesystem", true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(backend.FileSystem, true, false, []string{"./tmp/1"}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -196,7 +207,7 @@ func TestRebuildNonExisting(t *testing.T) {
 	setup(t)
 	defer cleanUp(t)
 
-	plugin := newTestPlugin("s3", true, false, []string{"./nonexisting/path"}, "", "")
+	plugin := newTestPlugin(backend.S3, true, false, []string{"./nonexisting/path"}, "", "tar")
 
 	if err := plugin.Exec(); err == nil {
 		t.Error("plugin exec did not fail as expected, error: <nil>")
@@ -222,7 +233,9 @@ func TestRestore(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
@@ -234,7 +247,9 @@ func TestRestore(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	if _, err := file1.WriteString("some content\n"); err != nil {
+	content = make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
@@ -255,7 +270,7 @@ func TestRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plugin := newTestPlugin("s3", true, false, []string{dirPath}, "", "")
+	plugin := newTestPlugin(backend.S3, true, false, []string{dirPath}, "", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -302,7 +317,8 @@ func TestRestoreWithCacheKey(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
@@ -318,14 +334,16 @@ func TestRestoreWithCacheKey(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	if _, err := file1.WriteString("some content\n"); err != nil {
+	content = make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
 	file1.Sync()
 	file1.Close()
 
-	plugin := newTestPlugin("s3", true, false, []string{"./tmp/1"}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "")
+	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -363,7 +381,8 @@ func TestRestoreWithGzip(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
@@ -379,14 +398,16 @@ func TestRestoreWithGzip(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	if _, err := file1.WriteString("some content\n"); err != nil {
+	content = make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
 	file1.Sync()
 	file1.Close()
 
-	plugin := newTestPlugin("s3", true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -424,7 +445,8 @@ func TestRestoreWithFilesystem(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	if _, err := file.WriteString("some content\n"); err != nil {
+	content := make([]byte, 1*1024*1024)
+	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
@@ -440,14 +462,16 @@ func TestRestoreWithFilesystem(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	if _, err := file1.WriteString("some content\n"); err != nil {
+	content = make([]byte, 1*1024*1024)
+	rand.Read(content)
+	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
 	file1.Sync()
 	file1.Close()
 
-	plugin := newTestPlugin("filesystem", true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(backend.FileSystem, true, false, []string{"./tmp/1"}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -475,8 +499,15 @@ func TestRestoreWithFilesystem(t *testing.T) {
 // Helpers
 
 func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, archiveFmt string) Plugin {
+	var logger log.Logger
+	if testing.Verbose() {
+		logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	} else {
+		logger = log.NewNopLogger()
+	}
+
 	return Plugin{
-		Logger: log.NewNopLogger(),
+		Logger: logger,
 		Metadata: metadata.Metadata{
 			Repo: metadata.Repo{
 				Branch: "master",
@@ -496,7 +527,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 			Restore:          restore,
 
 			FileSystem: backend.FileSystemConfig{
-				CacheRoot: "../testcache/cache",
+				CacheRoot: "../../testdata/cache",
 			},
 
 			S3: backend.S3Config{

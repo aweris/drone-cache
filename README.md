@@ -96,7 +96,7 @@ USAGE:
    drone-cache [global options] command [command options] [arguments...]
 
 VERSION:
-   v1.0.4-18-g5fc2888-dirty
+   v1.0.4-19-g832ff1f-dirty
 
 COMMANDS:
      help, h  Shows a list of commands or help for one command
@@ -135,7 +135,7 @@ GLOBAL OPTIONS:
    --prev.build.number value, --pbn value      previous build number (default: 0) [$DRONE_PREV_BUILD_NUMBER]
    --prev.build.status value, --pbst value     previous build status [$DRONE_PREV_BUILD_STATUS]
    --prev.commit.sha value, --pcs value        previous build sha [$DRONE_PREV_COMMIT_SHA]
-   --backend value, -b value                   cache backend to use in plugin (s3, filesystem) (default: "s3") [$PLUGIN_BACKEND]
+   --backend value, -b value                   cache backend to use in plugin (s3, filesystem, sftp, azure, gcs) (default: "s3") [$PLUGIN_BACKEND]
    --mount value, -m value                     cache directories, an array of folders to cache [$PLUGIN_MOUNT]
    --rebuild, --reb                            rebuild the cache directories [$PLUGIN_REBUILD]
    --restore, --res                            restore the cache directories [$PLUGIN_RESTORE]

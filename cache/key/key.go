@@ -19,7 +19,7 @@ import (
 
 // TODO: Eliminate package level var
 // - Introduce new type
-// - Use logger
+// - TODO: Use logger
 var funcMap = template.FuncMap{
 	"checksum": func(path string) string {
 		absPath, err := filepath.Abs(filepath.Clean(path))

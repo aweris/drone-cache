@@ -11,6 +11,7 @@ import (
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/internal/plugin"
 
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/urfave/cli"
 )
@@ -215,8 +216,8 @@ func main() {
 
 		cli.StringFlag{
 			Name:   "backend, b",
-			Usage:  "cache backend to use in plugin (s3, filesystem)",
-			Value:  "s3",
+			Usage:  "cache backend to use in plugin (s3, filesystem, sftp, azure, gcs)",
+			Value:  backend.S3,
 			EnvVar: "PLUGIN_BACKEND",
 		},
 
@@ -387,7 +388,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		stdlog.Fatalf("%+v", err)
+		stdlog.Fatalf("%#v", err)
 	}
 }
 
@@ -399,9 +400,8 @@ func run(c *cli.Context) error {
 	}
 
 	logger := internal.NewLogger(logLevel, c.String("log.format"), "drone-cache")
-
-	plg := plugin.Plugin{
-		Logger: logger,
+	plg := &plugin.Plugin{
+		Logger: log.With(logger, "component", "plugin"),
 		Metadata: metadata.Metadata{
 			Repo: metadata.Repo{
 				Namespace: c.String("repo.namespace"),
@@ -482,7 +482,7 @@ func run(c *cli.Context) error {
 				},
 			},
 
-			CloudStorage: backend.CloudStorageConfig{
+			GCS: backend.GCSConfig{
 				Bucket:     c.String("bucket"),
 				Encryption: c.String("encryption"),
 				Endpoint:   c.String("endpoint"),

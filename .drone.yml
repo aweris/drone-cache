@@ -38,8 +38,8 @@ steps:
     TEST_SFTP_HOST: sftp
     TEST_AZURITE_URL: azurite:10000
   volumes:
-  - name: testcache
-    path: /drone/src/testcache/cache
+  - name: testdata
+    path: /drone/src/testdata/cache
 
 - name: lint
   image: golang:1.13-alpine
@@ -278,8 +278,8 @@ steps:
     TEST_SFTP_HOST: sftp
     TEST_AZURITE_URL: azurite:10000
   volumes:
-  - name: testcache
-    path: /drone/src/testcache/cache
+  - name: testdata
+    path: /drone/src/testdata/cache
 
 services:
 - name: filestorage
@@ -308,7 +308,7 @@ services:
 volumes:
 - name: cache
   temp: {}
-- name: testcache
+- name: testdata
   temp: {}
 
 trigger:
