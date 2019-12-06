@@ -69,9 +69,13 @@ func (w *Writer) Close() error {
 // Helpers
 
 func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(string, os.FileInfo, error) error {
-	return func(path string, fi os.FileInfo, pErr error) error {
-		if pErr != nil {
-			return pErr
+	return func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if fi == nil {
+			return fmt.Errorf("no file info")
 		}
 
 		// Create header for Regular files and Directories
