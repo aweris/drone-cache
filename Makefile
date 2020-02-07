@@ -89,7 +89,7 @@ container-push-dev: container-dev
 test: $(GOTEST_BIN)
 	docker-compose up -d
 	mkdir -p ./testdata/cache
-	gotest -race -short -cover -benchmem -v ./...
+	gotest -race -short -cover -benchmem ./...
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT_BIN)

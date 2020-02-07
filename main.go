@@ -5,7 +5,7 @@ import (
 	stdlog "log"
 	"os"
 
-	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/cache/archive"
 	"github.com/meltwater/drone-cache/cache/backend"
 	"github.com/meltwater/drone-cache/internal"
 	"github.com/meltwater/drone-cache/internal/metadata"
@@ -244,14 +244,14 @@ func main() {
 		cli.StringFlag{
 			Name:   "archive-format, arcfmt",
 			Usage:  "archive format to use to store the cache directories (tar, gzip)",
-			Value:  cache.DefaultArchiveFormat,
+			Value:  archive.DefaultArchiveFormat,
 			EnvVar: "PLUGIN_ARCHIVE_FORMAT",
 		},
 		cli.IntFlag{
 			Name: "compression-level, cpl",
 			Usage: `compression level to use for gzip compression when archive-format specified as gzip
 			(check https://godoc.org/compress/flate#pkg-constants for available options)`,
-			Value:  cache.DefaultCompressionLevel,
+			Value:  archive.DefaultCompressionLevel,
 			EnvVar: "PLUGIN_COMPRESSION_LEVEL",
 		},
 		cli.BoolFlag{
