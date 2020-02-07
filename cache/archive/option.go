@@ -5,7 +5,7 @@ type options struct {
 	skipSymlinks     bool
 }
 
-// Option overrides behavior of Cache.
+// Option overrides behavior of Archive.
 type Option interface {
 	apply(*options)
 }

@@ -1,12 +1,14 @@
-package backend
+package sftp
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/go-kit/kit/log"
+	"github.com/meltwater/drone-cache/storage/backend"
 )
 
 const defaultSFTPHost = "127.0.0.1"
@@ -16,17 +18,20 @@ var host = getEnv("TEST_SFTP_HOST", defaultSFTPHost)
 var port = getEnv("TEST_SFTP_PORT", defaultSFTPPort)
 
 func TestSFTPTruth(t *testing.T) {
-	cli, err := InitializeSFTPBackend(log.NewNopLogger(),
-		SFTPConfig{
-			CacheRoot: "/upload",
-			Username:  "foo",
-			Auth: SSHAuth{
-				Password: "pass",
-				Method:   SSHAuthMethodPassword,
+	cli, err := New(log.NewNopLogger(),
+		backend.Configs{
+			SFTP: backend.SFTPConfig{
+				CacheRoot: "/upload",
+				Username:  "foo",
+				Auth: backend.SSHAuth{
+					Password: "pass",
+					Method:   backend.SSHAuthMethodPassword,
+				},
+				Host: host,
+				Port: port,
 			},
-			Host: host,
-			Port: port,
-		}, true)
+			Debug: true,
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,14 +42,14 @@ func TestSFTPTruth(t *testing.T) {
 	file, _ := os.Create("test")
 	_, _ = file.Write([]byte(content))
 	_, _ = file.Seek(0, 0)
-	err = cli.Put("test3.t", file)
+	err = cli.Put(context.TODO(), "test3.t", file)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_ = file.Close()
 
 	// GET TEST
-	readCloser, err := cli.Get("test3.t")
+	readCloser, err := cli.Get(context.TODO(), "test3.t")
 	if err != nil {
 		t.Fatal(err)
 	}

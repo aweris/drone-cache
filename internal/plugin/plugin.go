@@ -13,6 +13,7 @@ import (
 	"github.com/meltwater/drone-cache/cache/key"
 	keygen "github.com/meltwater/drone-cache/cache/key/generator"
 	"github.com/meltwater/drone-cache/internal/metadata"
+	"github.com/meltwater/drone-cache/storage"
 	"github.com/meltwater/drone-cache/storage/backend"
 
 	"github.com/go-kit/kit/log"
@@ -90,7 +91,14 @@ func (p *Plugin) Exec() error {
 	}
 
 	// 2. Initialize backend
-	storage, err := storage.FromConfig(p.logger, cfg)
+	storage, err := storage.FromConfig(p.logger, cfg.Backend,
+		backend.WithDebug(cfg.Debug),
+		backend.WithAzure(cfg.Azure),
+		backend.WithFileSystem(cfg.FileSystem),
+		backend.WithGCS(cfg.GCS),
+		backend.WithS3(cfg.S3),
+		backend.WithSFTP(cfg.SFTP),
+	)
 	if err != nil {
 		return fmt.Errorf("initialize, <%s> as backend %w", cfg.Backend, err)
 	}

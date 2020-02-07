@@ -3,6 +3,7 @@ package cache
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -22,15 +23,15 @@ type cache struct {
 	logger log.Logger
 
 	a archive.Archive
-	b storage.Backend
+	s storage.Storage
 }
 
 // New creates a new cache with given parameters.
-func New(logger log.Logger, b storage.Backend, a archive.Archive) *cache {
+func New(logger log.Logger, s storage.Storage, a archive.Archive) *cache {
 	return &cache{
 		logger: log.With(logger, "component", "cache"),
 		a:      a,
-		b:      b,
+		s:      s,
 	}
 }
 
@@ -72,7 +73,7 @@ func (c *cache) Push(src, dst string) error {
 
 	level.Info(c.logger).Log("msg", "uploading archived directory", "src", src, "dst", dst)
 
-	if err := c.b.Put(dst, file); err != nil {
+	if err := c.s.Put(dst, file); err != nil {
 		return fmt.Errorf("upload file %w", err)
 	}
 
@@ -84,7 +85,7 @@ func (c *cache) Pull(src, dst string) error {
 	level.Info(c.logger).Log("msg", "downloading archived directory", "src", src)
 
 	// 1. download archive
-	rc, err := c.b.Get(src)
+	rc, err := c.s.Get(src, io.Writer) // TODO: !!
 	if err != nil {
 		return fmt.Errorf("get file from storage backend %w", err)
 	}

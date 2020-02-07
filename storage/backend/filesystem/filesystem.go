@@ -1,26 +1,48 @@
-package backend
+package filesystem
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
-	"github.com/meltwater/drone-cache/storage"
+	"github.com/meltwater/drone-cache/storage/backend"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 )
 
-// filesystem is an file system implementation of the Backend
+const defaultFileMode = 0755
+
+// filesystem is an file system implementation of the Backend.
 type filesystem struct {
 	cacheRoot string
 }
 
-// newFileSystem returns a new file system Backend implementation
-func newFileSystem(cacheRoot string) storage.Backend {
-	return &filesystem{cacheRoot: cacheRoot}
+// New creates a filesystem backend.
+func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
+	level.Warn(l).Log("msg", "using filesystem as backend")
+	l = log.With(l, "backend", backend.FileSystem)
+	c := cfgs.FileSystem
+
+	if strings.TrimRight(path.Clean(c.CacheRoot), "/") == "" {
+		return nil, fmt.Errorf("empty or root path given, <%s> as cache root, ", c.CacheRoot)
+	}
+
+	if _, err := os.Stat(c.CacheRoot); err != nil {
+		return nil, fmt.Errorf("make sure volume is mounted, <%s> as cache root %w", c.CacheRoot, err)
+	}
+
+	level.Debug(l).Log("msg", "filesystem backend", "config", fmt.Sprintf("%#v", c))
+
+	return &filesystem{cacheRoot: c.CacheRoot}, nil
 }
 
-// Get returns an io.Reader for reading the contents of the file
-func (c *filesystem) Get(p string) (io.ReadCloser, error) {
+// Get returns an io.Reader for reading the contents of the file.
+func (c *filesystem) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
 	if err != nil {
 		return nil, fmt.Errorf("get the object %w", err)
@@ -29,15 +51,15 @@ func (c *filesystem) Get(p string) (io.ReadCloser, error) {
 	return os.Open(absPath)
 }
 
-// Put uploads the contents of the io.ReadSeeker
-func (c *filesystem) Put(p string, src io.ReadSeeker) error {
+// Put uploads the contents of the io.ReadSeeker.
+func (c *filesystem) Put(ctx context.Context, p string, src io.ReadSeeker) error {
 	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
 	if err != nil {
 		return fmt.Errorf("build path %w", err)
 	}
 
 	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, os.FileMode(0755)); err != nil { //nolint:mnd 755 is not a magic number
+	if err := os.MkdirAll(dir, os.FileMode(defaultFileMode)); err != nil {
 		return fmt.Errorf("create directory <%s> %w", dir, err)
 	}
 

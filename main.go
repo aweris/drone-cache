@@ -337,7 +337,7 @@ func main() {
 			EnvVar: "PLUGIN_ACCOUNT_KEY,AZURE_ACCOUNT_KEY",
 		},
 		cli.StringFlag{
-			Name:   "azure-container-name",
+			Name:   "azure-blob-container-name",
 			Usage:  "Azure Blob Storage container name",
 			EnvVar: "PLUGIN_CONTAINER,AZURE_CONTAINER_NAME",
 		},
@@ -346,6 +346,12 @@ func main() {
 			Usage:  "Azure Blob Storage URL",
 			Value:  "blob.core.windows.net",
 			EnvVar: "AZURE_BLOB_STORAGE_URL",
+		},
+		cli.IntFlag{
+			Name:   "azure-blob-max-retry-requets",
+			Usage:  "Azure Blob Storage Max Retry Requests",
+			EnvVar: "AZURE_BLOB_MAX_RETRY_REQUESTS",
+			Value:  4,
 		},
 
 		// SFTP specific Config flags
