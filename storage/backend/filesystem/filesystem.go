@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/storage"
 )
 
 // filesystem is an file system implementation of the Backend
@@ -15,7 +15,7 @@ type filesystem struct {
 }
 
 // newFileSystem returns a new file system Backend implementation
-func newFileSystem(cacheRoot string) cache.Backend {
+func newFileSystem(cacheRoot string) storage.Backend {
 	return &filesystem{cacheRoot: cacheRoot}
 }
 

@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/storage"
 )
 
 type azureBackend struct {
@@ -14,7 +14,7 @@ type azureBackend struct {
 	ctx          context.Context
 }
 
-func newAzure(ctx context.Context, containerURL azblob.ContainerURL) cache.Backend {
+func newAzure(ctx context.Context, containerURL azblob.ContainerURL) storage.Backend {
 	return &azureBackend{
 		containerURL: containerURL,
 		ctx:          ctx,

@@ -7,8 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-
-	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/storage"
 )
 
 // s3Backend is an S3 implementation of the Backend
@@ -20,7 +19,7 @@ type s3Backend struct {
 }
 
 // newS3 returns a new S3 remote Backend implemented
-func newS3(bucket, acl, encryption string, conf *aws.Config) cache.Backend {
+func newS3(bucket, acl, encryption string, conf *aws.Config) storage.Backend {
 	client := s3.New(session.Must(session.NewSessionWithOptions(session.Options{})), conf)
 
 	return &s3Backend{

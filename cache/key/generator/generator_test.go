@@ -1,40 +1,41 @@
-package cachekey
+package generator
 
 import (
 	"testing"
 	"text/template"
 
+	"github.com/go-kit/kit/log"
 	"github.com/meltwater/drone-cache/internal/metadata"
 )
 
-var mockFuncMap = template.FuncMap{
-	"checksum": funcMap["checksum"],
-	"epoch":    func() string { return "1550563151" },
-	"arch":     func() string { return "amd64" },
-	"os":       func() string { return "darwin" },
-}
-
-func init() {
-	funcMap = mockFuncMap
-}
-
 func TestGenerate(t *testing.T) {
+	l := log.NewNopLogger()
+	g := MetadataGenerator{
+		logger: l,
+		data:   metadata.Metadata{Repo: metadata.Repo{Name: "RepoName"}},
+		funcMap: template.FuncMap{
+			"checksum": checksumFunc(l),
+			"epoch":    func() string { return "1550563151" },
+			"arch":     func() string { return "amd64" },
+			"os":       func() string { return "darwin" },
+		},
+	}
+
 	table := []struct {
 		given    string
 		expected string
 	}{
 		{`{{ .Repo.Name }}`, "RepoName"},
 		{`{{ checksum "checksum_file_test.txt"}}`, "04a29c732ecbce101c1be44c948a50c6"},
-		{`{{ checksum "../../docs/drone_env_vars.md"}}`, "f8b5b7f96f3ffaa828e4890aab290e59"},
+		{`{{ checksum "../../../docs/drone_env_vars.md"}}`, "f8b5b7f96f3ffaa828e4890aab290e59"},
 		{`{{ epoch }}`, "1550563151"},
 		{`{{ arch }}`, "amd64"},
 		{`{{ os }}`, "darwin"},
 	}
-	m := metadata.Metadata{Repo: metadata.Repo{Name: "RepoName"}}
 
 	for _, tt := range table {
 		t.Run(tt.given, func(t *testing.T) {
-			actual, err := Generate(tt.given, "", m)
+			actual, err := g.Generate(tt.given, "")
 			if err != nil {
 				t.Errorf("generate failed, error: %v\n", err)
 			}
@@ -47,6 +48,18 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestParseTemplate(t *testing.T) {
+	l := log.NewNopLogger()
+	g := MetadataGenerator{
+		logger: l,
+		data:   metadata.Metadata{Repo: metadata.Repo{Name: "RepoName"}},
+		funcMap: template.FuncMap{
+			"checksum": checksumFunc(l),
+			"epoch":    func() string { return "1550563151" },
+			"arch":     func() string { return "amd64" },
+			"os":       func() string { return "darwin" },
+		},
+	}
+
 	table := []struct {
 		given string
 	}{
@@ -58,7 +71,7 @@ func TestParseTemplate(t *testing.T) {
 	}
 	for _, tt := range table {
 		t.Run(tt.given, func(t *testing.T) {
-			_, err := ParseTemplate(tt.given)
+			_, err := g.ParseTemplate(tt.given)
 			if err != nil {
 				t.Errorf("parser template failed, error: %v\n", err)
 			}
@@ -67,7 +80,7 @@ func TestParseTemplate(t *testing.T) {
 }
 
 func TestHash(t *testing.T) {
-	actual, err := Hash("hash")
+	actual, err := hash("hash")
 	if err != nil {
 		t.Errorf("hash failed, error: %v\n", err)
 	}

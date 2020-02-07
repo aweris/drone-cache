@@ -10,9 +10,10 @@ import (
 
 	"github.com/meltwater/drone-cache/cache"
 	"github.com/meltwater/drone-cache/cache/archive"
-	"github.com/meltwater/drone-cache/cache/backend"
-	cachekey "github.com/meltwater/drone-cache/cache/key"
+	"github.com/meltwater/drone-cache/cache/key"
+	keygen "github.com/meltwater/drone-cache/cache/key/generator"
 	"github.com/meltwater/drone-cache/internal/metadata"
+	"github.com/meltwater/drone-cache/storage/backend"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -21,9 +22,9 @@ import (
 type (
 	// Config plugin-specific parameters and secrets.
 	Config struct {
-		ArchiveFormat string
-		Backend       string
-		CacheKey      string
+		ArchiveFormat    string
+		Backend          string
+		CacheKeyTemplate string
 
 		CompressionLevel int
 
@@ -43,7 +44,8 @@ type (
 
 	// Plugin stores metadata about current plugin.
 	Plugin struct {
-		Logger   log.Logger
+		logger log.Logger
+
 		Metadata metadata.Metadata
 		Config   Config
 	}
@@ -56,54 +58,60 @@ func (e Error) Error() string { return string(e) }
 
 func (e Error) Unwrap() error { return e }
 
+func New(logger log.Logger) *Plugin {
+	return &Plugin{logger: logger}
+}
+
 // Exec entry point of Plugin, where the magic happens.
 func (p *Plugin) Exec() error {
-	c := p.Config
+	cfg := p.Config
 
 	// 1. Check parameters
-	if c.Debug {
-		level.Debug(p.Logger).Log("msg", "DEBUG MODE enabled!")
+	if cfg.Debug {
+		level.Debug(p.logger).Log("msg", "DEBUG MODE enabled!")
 
 		for _, pair := range os.Environ() {
-			level.Debug(p.Logger).Log("var", pair)
+			level.Debug(p.logger).Log("var", pair)
 		}
 
-		level.Debug(p.Logger).Log("msg", "plugin initialized with config", "config", fmt.Sprintf("%#v", p.Config))
-		level.Debug(p.Logger).Log("msg", "plugin initialized with metadata", "metadata", fmt.Sprintf("%#v", p.Metadata))
+		level.Debug(p.logger).Log("msg", "plugin initialized with config", "config", fmt.Sprintf("%#v", p.Config))
+		level.Debug(p.logger).Log("msg", "plugin initialized with metadata", "metadata", fmt.Sprintf("%#v", p.Metadata))
 	}
 
-	if c.Rebuild && c.Restore {
+	if cfg.Rebuild && cfg.Restore {
 		return errors.New("rebuild and restore are mutually exclusive, please set only one of them")
 	}
 
-	_, err := cachekey.ParseTemplate(c.CacheKey)
+	g := keygen.New(p.logger, p.Metadata)
+
+	_, err := g.ParseTemplate(cfg.CacheKeyTemplate)
 	if err != nil {
-		return fmt.Errorf("parse, <%s> as cache key template, falling back to default %w", c.CacheKey, err)
+		return fmt.Errorf("parse, <%s> as cache key template, falling back to default %w", cfg.CacheKeyTemplate, err)
 	}
 
 	// 2. Initialize backend
-	backend, err := initializeBackend(p.Logger, c)
+	storage, err := storage.FromConfig(p.logger, cfg)
 	if err != nil {
-		return fmt.Errorf("initialize, <%s> as backend %w", c.Backend, err)
+		return fmt.Errorf("initialize, <%s> as backend %w", cfg.Backend, err)
 	}
 
 	// 3. Initialize cache
-	cch := cache.New(p.Logger, backend,
-		archive.FromFormat(p.Logger, c.ArchiveFormat,
-			archive.WithSkipSymlinks(c.SkipSymlinks),
-			archive.WithCompressionLevel(c.CompressionLevel),
+	c := cache.New(p.logger, storage,
+		archive.FromFormat(p.logger, cfg.ArchiveFormat,
+			archive.WithSkipSymlinks(cfg.SkipSymlinks),
+			archive.WithCompressionLevel(cfg.CompressionLevel),
 		),
 	)
 
 	// 4. Select mode
-	if c.Rebuild {
-		if err := processRebuild(p.Logger, cch, p.Config.CacheKey, p.Config.Mount, p.Metadata); err != nil {
+	if cfg.Rebuild {
+		if err := processRebuild(p.logger, c, g, p.Config.CacheKeyTemplate, p.Metadata, p.Config.Mount); err != nil {
 			return Error(fmt.Sprintf("[IMPORTANT] build cache, process rebuild failed, %v\n", err))
 		}
 	}
 
-	if c.Restore {
-		if err := processRestore(p.Logger, cch, p.Config.CacheKey, p.Config.Mount, p.Metadata); err != nil {
+	if cfg.Restore {
+		if err := processRestore(p.logger, c, g, p.Config.CacheKeyTemplate, p.Metadata, p.Config.Mount); err != nil {
 			return Error(fmt.Sprintf("[IMPORTANT] restore cache, process restore failed, %v\n", err))
 		}
 	}
@@ -111,31 +119,8 @@ func (p *Plugin) Exec() error {
 	return nil
 }
 
-// initializeBackend initializes backend using given configuration
-func initializeBackend(l log.Logger, c Config) (cache.Backend, error) {
-	switch c.Backend {
-	case backend.Azure:
-		level.Warn(l).Log("msg", "using azure blob as backend")
-		return backend.InitializeAzureBackend(l, c.Azure, c.Debug)
-	case backend.S3:
-		level.Warn(l).Log("msg", "using aws s3 as backend")
-		return backend.InitializeS3Backend(l, c.S3, c.Debug)
-	case backend.GCS:
-		level.Warn(l).Log("msg", "using gc storage as backend")
-		return backend.InitializeGCSBackend(l, c.GCS, c.Debug)
-	case backend.FileSystem:
-		level.Warn(l).Log("msg", "using filesystem as backend")
-		return backend.InitializeFileSystemBackend(l, c.FileSystem, c.Debug)
-	case backend.SFTP:
-		level.Warn(l).Log("msg", "using sftp as backend")
-		return backend.InitializeSFTPBackend(l, c.SFTP, c.Debug)
-	default:
-		return nil, errors.New("unknown backend")
-	}
-}
-
 // processRebuild the remote cache from the local environment
-func processRebuild(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDirs []string, m metadata.Metadata) error {
+func processRebuild(l log.Logger, c cache.Cache, g key.Generator, cacheKeyTmpl string, m metadata.Metadata, mountedDirs []string) error {
 	now := time.Now()
 	branch := m.Commit.Branch
 
@@ -144,7 +129,7 @@ func processRebuild(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDir
 			return fmt.Errorf("mount <%s>, make sure file or directory exists and readable %w", mount, err)
 		}
 
-		key, err := cacheKey(l, m, cacheKeyTmpl, mount, branch)
+		key, err := g.Generate(cacheKeyTmpl, mount, branch)
 		if err != nil {
 			return fmt.Errorf("generate cache key %w", err)
 		}
@@ -164,12 +149,12 @@ func processRebuild(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDir
 }
 
 // processRestore the local environment from the remote cache.
-func processRestore(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDirs []string, m metadata.Metadata) error {
+func processRestore(l log.Logger, c cache.Cache, g key.Generator, cacheKeyTmpl string, m metadata.Metadata, mountedDirs []string) error {
 	now := time.Now()
 	branch := m.Commit.Branch
 
 	for _, mount := range mountedDirs {
-		key, err := cacheKey(l, m, cacheKeyTmpl, mount, branch)
+		key, err := g.Generate(cacheKeyTmpl, mount, branch)
 		if err != nil {
 			return fmt.Errorf("generate cache key %w", err)
 		}
@@ -185,28 +170,4 @@ func processRestore(l log.Logger, c cache.Cache, cacheKeyTmpl string, mountedDir
 	level.Info(l).Log("msg", "cache restored", "took", time.Since(now))
 
 	return nil
-}
-
-// Helpers
-
-// cacheKey generates key from given template as parameter or fallbacks hash.
-func cacheKey(l log.Logger, p metadata.Metadata, cacheKeyTmpl, mount, branch string) (string, error) {
-	level.Info(l).Log("msg", "using provided cache key template")
-
-	key, err := cachekey.Generate(cacheKeyTmpl, mount, metadata.Metadata{
-		Build:  p.Build,
-		Commit: p.Commit,
-		Repo:   p.Repo,
-	})
-
-	if err != nil {
-		level.Error(l).Log("msg", "falling back to default key", "err", err)
-		key, err = cachekey.Hash(mount, branch)
-
-		if err != nil {
-			return "", fmt.Errorf("generate hash key for mounted %w", err)
-		}
-	}
-
-	return key, nil
 }

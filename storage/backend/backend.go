@@ -10,13 +10,12 @@ import (
 	"path"
 	"strings"
 
-	"github.com/meltwater/drone-cache/cache"
-
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/meltwater/drone-cache/storage"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"google.golang.org/api/option"
@@ -32,7 +31,7 @@ const (
 
 // S3Config is a structure to store S3  backend configuration
 type S3Config struct {
-	// Indicates the files ACL, which should be one
+	// Indicates the files ACL, which should be one,
 	// of the following:
 	//     private
 	//     public-read
@@ -75,7 +74,9 @@ type FileSystemConfig struct {
 }
 
 // InitializeS3Backend creates an S3 backend
-func InitializeS3Backend(l log.Logger, c S3Config, debug bool) (cache.Backend, error) {
+func InitializeS3Backend(l log.Logger, c S3Config, debug bool) (storage.Backend, error) {
+	level.Warn(l).Log("msg", "using aws s3 as backend")
+
 	awsConf := &aws.Config{
 		Region:           aws.String(c.Region),
 		Endpoint:         &c.Endpoint,
@@ -99,7 +100,9 @@ func InitializeS3Backend(l log.Logger, c S3Config, debug bool) (cache.Backend, e
 }
 
 // InitializeAzureBackend creates an AzureBlob backend
-func InitializeAzureBackend(l log.Logger, c AzureConfig, debug bool) (cache.Backend, error) {
+func InitializeAzureBackend(l log.Logger, c AzureConfig, debug bool) (storage.Backend, error) {
+	level.Warn(l).Log("msg", "using azure blob as backend")
+
 	// From the Azure portal, get your storage account name and key and set environment variables.
 	accountName, accountKey := c.AccountName, c.AccountKey
 	if len(accountName) == 0 || len(accountKey) == 0 {
@@ -139,7 +142,9 @@ func InitializeAzureBackend(l log.Logger, c AzureConfig, debug bool) (cache.Back
 }
 
 // InitializeFileSystemBackend creates a filesystem backend
-func InitializeFileSystemBackend(l log.Logger, c FileSystemConfig, debug bool) (cache.Backend, error) {
+func InitializeFileSystemBackend(l log.Logger, c FileSystemConfig, debug bool) (storage.Backend, error) {
+	level.Warn(l).Log("msg", "using filesystem as backend")
+
 	if strings.TrimRight(path.Clean(c.CacheRoot), "/") == "" {
 		return nil, fmt.Errorf("empty or root path given, <%s> as cache root, ", c.CacheRoot)
 	}
@@ -175,7 +180,9 @@ type SFTPConfig struct {
 	Auth      SSHAuth
 }
 
-func InitializeSFTPBackend(l log.Logger, c SFTPConfig, debug bool) (cache.Backend, error) {
+func InitializeSFTPBackend(l log.Logger, c SFTPConfig, debug bool) (storage.Backend, error) {
+	level.Warn(l).Log("msg", "using sftp as backend")
+
 	sshClient, err := getSSHClient(c)
 	if err != nil {
 		return nil, err
@@ -249,7 +256,9 @@ type GCSConfig struct {
 }
 
 // InitializeGCSBackend creates a Cloud Storage backend
-func InitializeGCSBackend(l log.Logger, c GCSConfig, debug bool) (cache.Backend, error) {
+func InitializeGCSBackend(l log.Logger, c GCSConfig, debug bool) (storage.Backend, error) {
+	level.Warn(l).Log("msg", "using gc storage as backend")
+
 	var opts []option.ClientOption
 	if c.APIKey != "" {
 		opts = append(opts, option.WithAPIKey(c.APIKey))

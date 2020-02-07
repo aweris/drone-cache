@@ -4,9 +4,9 @@ import (
 	"context"
 	"io"
 
-	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/storage"
 
-	"cloud.google.com/go/storage"
+	gcstorage "cloud.google.com/go/storage"
 	"google.golang.org/api/option"
 )
 
@@ -15,13 +15,13 @@ type gcsBackend struct {
 	bucket     string
 	acl        string
 	encryption string
-	client     *storage.Client
+	client     *gcstorage.Client
 }
 
 // newGCS returns a new Cloud Storage remote Backend implemented
-func newGCS(bucket, acl, encryption string, opts ...option.ClientOption) (cache.Backend, error) {
+func newGCS(bucket, acl, encryption string, opts ...option.ClientOption) (storage.Backend, error) {
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx, opts...)
+	client, err := gcstorage.NewClient(ctx, opts...)
 
 	if err != nil {
 		return nil, err

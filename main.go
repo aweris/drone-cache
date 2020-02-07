@@ -6,10 +6,10 @@ import (
 	"os"
 
 	"github.com/meltwater/drone-cache/cache/archive"
-	"github.com/meltwater/drone-cache/cache/backend"
 	"github.com/meltwater/drone-cache/internal"
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/internal/plugin"
+	"github.com/meltwater/drone-cache/storage/backend"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -400,97 +400,98 @@ func run(c *cli.Context) error {
 	}
 
 	logger := internal.NewLogger(logLevel, c.String("log.format"), "drone-cache")
-	plg := &plugin.Plugin{
-		Logger: log.With(logger, "component", "plugin"),
-		Metadata: metadata.Metadata{
-			Repo: metadata.Repo{
-				Namespace: c.String("repo.namespace"),
-				Owner:     c.String("repo.owner"),
-				Name:      c.String("repo.name"),
-				Link:      c.String("repo.link"),
-				Avatar:    c.String("repo.avatar"),
-				Branch:    c.String("repo.branch"),
-				Private:   c.Bool("repo.private"),
-				Trusted:   c.Bool("repo.trusted"),
-			},
-			Build: metadata.Build{
-				Number:   c.Int("build.number"),
-				Event:    c.String("build.event"),
-				Status:   c.String("build.status"),
-				Deploy:   c.String("build.deploy"),
-				Created:  int64(c.Int("build.created")),
-				Started:  int64(c.Int("build.started")),
-				Finished: int64(c.Int("build.finished")),
-				Link:     c.String("build.link"),
-			},
-			Commit: metadata.Commit{
-				Remote:  c.String("remote.url"),
-				Sha:     c.String("commit.sha"),
-				Ref:     c.String("commit.sha"),
-				Link:    c.String("commit.link"),
-				Branch:  c.String("commit.branch"),
-				Message: c.String("commit.message"),
-				Author: metadata.Author{
-					Name:   c.String("commit.author.name"),
-					Email:  c.String("commit.author.email"),
-					Avatar: c.String("commit.author.avatar"),
-				},
+
+	plg := plugin.New(log.With(logger, "component", "plugin"))
+
+	plg.Metadata = metadata.Metadata{
+		Repo: metadata.Repo{
+			Namespace: c.String("repo.namespace"),
+			Owner:     c.String("repo.owner"),
+			Name:      c.String("repo.name"),
+			Link:      c.String("repo.link"),
+			Avatar:    c.String("repo.avatar"),
+			Branch:    c.String("repo.branch"),
+			Private:   c.Bool("repo.private"),
+			Trusted:   c.Bool("repo.trusted"),
+		},
+		Build: metadata.Build{
+			Number:   c.Int("build.number"),
+			Event:    c.String("build.event"),
+			Status:   c.String("build.status"),
+			Deploy:   c.String("build.deploy"),
+			Created:  int64(c.Int("build.created")),
+			Started:  int64(c.Int("build.started")),
+			Finished: int64(c.Int("build.finished")),
+			Link:     c.String("build.link"),
+		},
+		Commit: metadata.Commit{
+			Remote:  c.String("remote.url"),
+			Sha:     c.String("commit.sha"),
+			Ref:     c.String("commit.sha"),
+			Link:    c.String("commit.link"),
+			Branch:  c.String("commit.branch"),
+			Message: c.String("commit.message"),
+			Author: metadata.Author{
+				Name:   c.String("commit.author.name"),
+				Email:  c.String("commit.author.email"),
+				Avatar: c.String("commit.author.avatar"),
 			},
 		},
-		Config: plugin.Config{
-			ArchiveFormat:    c.String("archive-format"),
-			Backend:          c.String("backend"),
-			CacheKey:         c.String("cache-key"),
-			CompressionLevel: c.Int("compression-level"),
-			Debug:            c.Bool("debug"),
-			Mount:            c.StringSlice("mount"),
-			Rebuild:          c.Bool("rebuild"),
-			Restore:          c.Bool("restore"),
+	}
 
-			FileSystem: backend.FileSystemConfig{
-				CacheRoot: c.String("filesystem-cache-root"),
-			},
+	plg.Config = plugin.Config{
+		ArchiveFormat:    c.String("archive-format"),
+		Backend:          c.String("backend"),
+		CacheKeyTemplate: c.String("cache-key"),
+		CompressionLevel: c.Int("compression-level"),
+		Debug:            c.Bool("debug"),
+		Mount:            c.StringSlice("mount"),
+		Rebuild:          c.Bool("rebuild"),
+		Restore:          c.Bool("restore"),
 
-			S3: backend.S3Config{
-				ACL:        c.String("acl"),
-				Bucket:     c.String("bucket"),
-				Encryption: c.String("encryption"),
-				Endpoint:   c.String("endpoint"),
-				Key:        c.String("access-key"),
-				PathStyle:  c.Bool("path-style"),
-				Region:     c.String("region"),
-				Secret:     c.String("secret-key"),
-			},
-
-			Azure: backend.AzureConfig{
-				AccountName:    c.String("azure-account-name"),
-				AccountKey:     c.String("azure-account-key"),
-				ContainerName:  c.String("azure-container-name"),
-				BlobStorageURL: c.String("azure-blob-storage-url"),
-				Azurite:        false,
-			},
-
-			SFTP: backend.SFTPConfig{
-				CacheRoot: c.String("sftp-cache-root"),
-				Username:  c.String("sftp-username"),
-				Host:      c.String("sftp-host"),
-				Port:      c.String("sftp-port"),
-				Auth: backend.SSHAuth{
-					Password:      c.String("sftp-password"),
-					PublicKeyFile: c.String("sftp-public-key-file"),
-					Method:        backend.SSHAuthMethod(c.String("sftp-auth-method")),
-				},
-			},
-
-			GCS: backend.GCSConfig{
-				Bucket:     c.String("bucket"),
-				Encryption: c.String("encryption"),
-				Endpoint:   c.String("endpoint"),
-				APIKey:     c.String("secret-key"),
-			},
-
-			SkipSymlinks: c.Bool("skip-symlinks"),
+		FileSystem: backend.FileSystemConfig{
+			CacheRoot: c.String("filesystem-cache-root"),
 		},
+
+		S3: backend.S3Config{
+			ACL:        c.String("acl"),
+			Bucket:     c.String("bucket"),
+			Encryption: c.String("encryption"),
+			Endpoint:   c.String("endpoint"),
+			Key:        c.String("access-key"),
+			PathStyle:  c.Bool("path-style"),
+			Region:     c.String("region"),
+			Secret:     c.String("secret-key"),
+		},
+
+		Azure: backend.AzureConfig{
+			AccountName:    c.String("azure-account-name"),
+			AccountKey:     c.String("azure-account-key"),
+			ContainerName:  c.String("azure-container-name"),
+			BlobStorageURL: c.String("azure-blob-storage-url"),
+			Azurite:        false,
+		},
+
+		SFTP: backend.SFTPConfig{
+			CacheRoot: c.String("sftp-cache-root"),
+			Username:  c.String("sftp-username"),
+			Host:      c.String("sftp-host"),
+			Port:      c.String("sftp-port"),
+			Auth: backend.SSHAuth{
+				Password:      c.String("sftp-password"),
+				PublicKeyFile: c.String("sftp-public-key-file"),
+				Method:        backend.SSHAuthMethod(c.String("sftp-auth-method")),
+			},
+		},
+
+		GCS: backend.GCSConfig{
+			Bucket:     c.String("bucket"),
+			Encryption: c.String("encryption"),
+			Endpoint:   c.String("endpoint"),
+			APIKey:     c.String("secret-key"),
+		},
+
+		SkipSymlinks: c.Bool("skip-symlinks"),
 	}
 
 	err := plg.Exec()

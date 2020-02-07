@@ -21,6 +21,10 @@ all: drone-cache
 drone-cache: vendor main.go $(wildcard *.go) $(wildcard */*.go)
 	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o $@ .
 
+.PHONY: build
+build: vendor main.go $(wildcard *.go) $(wildcard */*.go)
+	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o drone-cache .
+
 .PHONY: release
 release: drone-cache $(GORELEASER_BIN)
 	goreleaser release --rm-dist
@@ -89,7 +93,13 @@ container-push-dev: container-dev
 test: $(GOTEST_BIN)
 	docker-compose up -d
 	mkdir -p ./testdata/cache
-	gotest -race -short -cover -benchmem ./...
+	gotest -race -short -cover ./...
+
+.PHONY: test-local
+test-local: $(GOTEST_BIN)
+	docker-compose up -d
+	mkdir -p ./testdata/cache
+	gotest -race -cover -benchmem -v ./...
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT_BIN)

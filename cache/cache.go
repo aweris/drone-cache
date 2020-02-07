@@ -3,34 +3,31 @@ package cache
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/meltwater/drone-cache/cache/archive"
+	"github.com/meltwater/drone-cache/storage"
 )
 
-// Backend implements operations for caching files.
-type Backend interface {
-	Get(string) (io.ReadCloser, error)
-	Put(string, io.ReadSeeker) error
+// Cache defines Cache functionality and stores configuration.
+type Cache interface {
+	Push(src, dst string) error
+	Pull(src, dst string) error
 }
 
-// Cache contains configuration for Cache functionality.
-type Cache struct {
+type cache struct {
 	logger log.Logger
 
 	a archive.Archive
-	b Backend
+	b storage.Backend
 }
 
 // New creates a new cache with given parameters.
-func New(logger log.Logger, b Backend, a archive.Archive) Cache {
-
-	return Cache{
+func New(logger log.Logger, b storage.Backend, a archive.Archive) *cache {
+	return &cache{
 		logger: log.With(logger, "component", "cache"),
 		a:      a,
 		b:      b,
@@ -38,21 +35,44 @@ func New(logger log.Logger, b Backend, a archive.Archive) Cache {
 }
 
 // Push pushes the archived file to the cache.
-func (c Cache) Push(src, dst string) error {
-	archivePath, err := c.archive(src)
+func (c *cache) Push(src, dst string) error {
+	// 1. check if source is reachable.
+	src, err := filepath.Abs(filepath.Clean(src))
 	if err != nil {
-		return fmt.Errorf("create archive %w", err)
+		return fmt.Errorf("read source directory %w", err)
 	}
 
-	f, err := os.Open(archivePath)
+	level.Info(c.logger).Log("msg", "archiving directory", "src", src)
+
+	// 2. create temp file
+	file, err := ioutil.TempFile("", "archive-*.tar")
 	if err != nil {
-		return fmt.Errorf("open archived file to send %w", err)
+		return fmt.Errorf("create tarball file <%s> %w", file.Name(), err)
 	}
-	defer f.Close()
+	defer file.Close()
+
+	// 3. write files in the src to the archive.
+	written, err := c.a.Create(src, file)
+	if err != nil {
+		return fmt.Errorf("archive write to %w", err)
+	}
+
+	// 4. get written file stats.
+	stat, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("archive file stat %w", err)
+	}
+
+	level.Debug(c.logger).Log(
+		"msg", "archive created",
+		"raw size", written,
+		"compressed size", stat.Size(),
+		"compression ratio %", written/stat.Size()*100,
+	)
 
 	level.Info(c.logger).Log("msg", "uploading archived directory", "src", src, "dst", dst)
 
-	if err := c.b.Put(dst, f); err != nil {
+	if err := c.b.Put(dst, file); err != nil {
 		return fmt.Errorf("upload file %w", err)
 	}
 
@@ -60,8 +80,9 @@ func (c Cache) Push(src, dst string) error {
 }
 
 // Pull fetches the archived file from the cache and restores to the host machine's file system.
-func (c Cache) Pull(src, dst string) error {
+func (c *cache) Pull(src, dst string) error {
 	level.Info(c.logger).Log("msg", "downloading archived directory", "src", src)
+
 	// 1. download archive
 	rc, err := c.b.Get(src)
 	if err != nil {
@@ -69,9 +90,8 @@ func (c Cache) Pull(src, dst string) error {
 	}
 	defer rc.Close()
 
-	// 2. extract archive
 	level.Info(c.logger).Log("msg", "extracting archived directory", "src", src, "dst", dst)
-
+	// 2. extract archive
 	written, err := c.a.Extract(dst, rc)
 	if err != nil {
 		return fmt.Errorf("extract files from downloaded archive %w", err)
@@ -79,69 +99,8 @@ func (c Cache) Pull(src, dst string) error {
 
 	level.Debug(c.logger).Log(
 		"msg", "archive extracted",
-		// "archive format", c.opts.archiveFmt,
 		"raw size", written,
 	)
 
 	return nil
-}
-
-// Helpers
-
-func (c Cache) archive(src string) (string, error) {
-	// 1. check if source is reachable.
-	src, err := filepath.Abs(filepath.Clean(src))
-	if err != nil {
-		return "", fmt.Errorf("read source directory %w", err)
-	}
-
-	level.Info(c.logger).Log("msg", "archiving directory", "src", src)
-
-	// 2. ensure tmp directory exists.
-	// TODO: Use os.TempDir(), check tests!
-	// This might not be needed!
-	if err := os.MkdirAll("/tmp/drone-cache/", os.FileMode(0755)); err != nil {
-		return "", fmt.Errorf("create tmp directory %w", err)
-	}
-
-	// TODO: Use ioutil.TempFile() // Puts file to default os.TempDir()
-	// Starting with Go 1.11, if the second string given to TempFile includes a "*", the random string replaces this "*".
-	// file, err := ioutil.TempFile("dir", "archive.*.tar")
-
-	// 3. create a temporary file for the archive.
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", fmt.Errorf("create tmp folder for archive %w", err)
-	}
-	archivePath := filepath.Join(dir, "archive")
-
-	// file, err := ioutil.TempFile(dir, "archive.tar")
-	file, err := os.Create(archivePath)
-	if err != nil {
-		return "", fmt.Errorf("create tarball file <%s> %w", archivePath, err)
-	}
-	defer file.Close()
-
-	// 4. write files in the src to the archive.
-	written, err := c.a.Create(src, file)
-	if err != nil {
-		return "", fmt.Errorf("archive write to %w", err)
-	}
-
-	// 5. get written file stats.
-	// stat, err := file.Stat()
-	// if err != nil {
-	// 	return "", fmt.Errorf("archive file stat %w", err)
-	// }
-
-	level.Debug(c.logger).Log(
-		"msg", "archive created",
-		// "archive format", c.opts.archiveFmt,
-		// "compression level", c.opts.compressionLevel,
-		"raw size", written,
-		// "compressed size", stat.Size(),
-		// "compression ratio %", written/stat.Size()*100,
-	)
-
-	return archivePath, nil
 }

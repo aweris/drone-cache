@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/meltwater/drone-cache/cache/archive"
-	"github.com/meltwater/drone-cache/cache/backend"
 	"github.com/meltwater/drone-cache/internal/metadata"
+	"github.com/meltwater/drone-cache/storage/backend"
 
 	"github.com/go-kit/kit/log"
 	"github.com/minio/minio-go"
@@ -507,7 +507,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 	}
 
 	return Plugin{
-		Logger: logger,
+		logger: logger,
 		Metadata: metadata.Metadata{
 			Repo: metadata.Repo{
 				Branch: "master",
@@ -521,7 +521,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 			ArchiveFormat:    archiveFmt,
 			CompressionLevel: archive.DefaultCompressionLevel,
 			Backend:          bck,
-			CacheKey:         cacheKey,
+			CacheKeyTemplate: cacheKey,
 			Mount:            mount,
 			Rebuild:          rebuild,
 			Restore:          restore,
