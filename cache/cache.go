@@ -23,25 +23,17 @@ type Backend interface {
 type Cache struct {
 	logger log.Logger
 
-	b    Backend
-	opts options
+	a archive.Archive
+	b Backend
 }
 
 // New creates a new cache with given parameters.
-func New(logger log.Logger, b Backend, opts ...Option) Cache {
-	options := options{
-		archiveFmt:       DefaultArchiveFormat,
-		compressionLevel: DefaultCompressionLevel,
-	}
-
-	for _, o := range opts {
-		o.apply(&options)
-	}
+func New(logger log.Logger, b Backend, a archive.Archive) Cache {
 
 	return Cache{
 		logger: log.With(logger, "component", "cache"),
+		a:      a,
 		b:      b,
-		opts:   options,
 	}
 }
 
@@ -80,17 +72,14 @@ func (c Cache) Pull(src, dst string) error {
 	// 2. extract archive
 	level.Info(c.logger).Log("msg", "extracting archived directory", "src", src, "dst", dst)
 
-	extractor := archive.NewExtractor(c.opts.archiveFmt)
-	defer extractor.Close()
-
-	written, err := extractor.ExtractFrom(rc)
+	written, err := c.a.Extract(dst, rc)
 	if err != nil {
 		return fmt.Errorf("extract files from downloaded archive %w", err)
 	}
 
 	level.Debug(c.logger).Log(
 		"msg", "archive extracted",
-		"archive format", c.opts.archiveFmt,
+		// "archive format", c.opts.archiveFmt,
 		"raw size", written,
 	)
 
@@ -134,10 +123,7 @@ func (c Cache) archive(src string) (string, error) {
 	defer file.Close()
 
 	// 4. write files in the src to the archive.
-	archiveWriter := archive.NewWriter(src, c.opts.archiveFmt, c.opts.compressionLevel, c.opts.skipSymlinks)
-	defer archiveWriter.Close()
-
-	written, err := archiveWriter.WriteTo(file)
+	written, err := c.a.Create(src, file)
 	if err != nil {
 		return "", fmt.Errorf("archive write to %w", err)
 	}
@@ -150,8 +136,8 @@ func (c Cache) archive(src string) (string, error) {
 
 	level.Debug(c.logger).Log(
 		"msg", "archive created",
-		"archive format", c.opts.archiveFmt,
-		"compression level", c.opts.compressionLevel,
+		// "archive format", c.opts.archiveFmt,
+		// "compression level", c.opts.compressionLevel,
 		"raw size", written,
 		// "compressed size", stat.Size(),
 		// "compression ratio %", written/stat.Size()*100,

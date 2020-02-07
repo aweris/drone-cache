@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/cache/archive"
 	"github.com/meltwater/drone-cache/cache/backend"
 	"github.com/meltwater/drone-cache/internal/metadata"
 
@@ -519,7 +519,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 		},
 		Config: Config{
 			ArchiveFormat:    archiveFmt,
-			CompressionLevel: cache.DefaultCompressionLevel,
+			CompressionLevel: archive.DefaultCompressionLevel,
 			Backend:          bck,
 			CacheKey:         cacheKey,
 			Mount:            mount,

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/meltwater/drone-cache/cache"
+	"github.com/meltwater/drone-cache/cache/archive"
 	"github.com/meltwater/drone-cache/cache/backend"
 	cachekey "github.com/meltwater/drone-cache/cache/key"
 	"github.com/meltwater/drone-cache/internal/metadata"
@@ -88,9 +89,10 @@ func (p *Plugin) Exec() error {
 
 	// 3. Initialize cache
 	cch := cache.New(p.Logger, backend,
-		cache.WithArchiveFormat(c.ArchiveFormat),
-		cache.WithSkipSymlinks(c.SkipSymlinks),
-		cache.WithCompressionLevel(c.CompressionLevel),
+		archive.FromFormat(p.Logger, c.ArchiveFormat,
+			archive.WithSkipSymlinks(c.SkipSymlinks),
+			archive.WithCompressionLevel(c.CompressionLevel),
+		),
 	)
 
 	// 4. Select mode

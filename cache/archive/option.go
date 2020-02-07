@@ -1,16 +1,6 @@
-package cache
-
-import (
-	"compress/flate"
-)
-
-const (
-	DefaultCompressionLevel = flate.DefaultCompression
-	DefaultArchiveFormat    = "tar"
-)
+package archive
 
 type options struct {
-	archiveFmt       string
 	compressionLevel int
 	skipSymlinks     bool
 }
@@ -30,13 +20,6 @@ func (f optionFunc) apply(o *options) {
 func WithSkipSymlinks(b bool) Option {
 	return optionFunc(func(o *options) {
 		o.skipSymlinks = b
-	})
-}
-
-// WithArchiveFormat sets archive format option.
-func WithArchiveFormat(s string) Option {
-	return optionFunc(func(o *options) {
-		o.archiveFmt = s
 	})
 }
 
