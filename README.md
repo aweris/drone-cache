@@ -1,35 +1,51 @@
 # drone-cache
 
-[![semver](https://img.shields.io/badge/semver-1.0.4-blue.svg?cacheSeconds=2592000)](https://github.com/meltwater/drone-cache/releases) [![Maintenance](https://img.shields.io/maintenance/yes/2019.svg)](https://github.com/meltwater/drone-cache/commits/master) [![Drone](https://cloud.drone.io/api/badges/meltwater/drone-cache/status.svg)](https://cloud.drone.io/meltwater/drone-cache) [![Go Doc](https://godoc.org/github.com/meltwater/drone-cache?status.svg)](http://godoc.org/github.com/meltwater/drone-cache) [![Go Report Card](https://goreportcard.com/badge/github.com/meltwater/drone-cache)](https://goreportcard.com/report/github.com/meltwater/drone-cache) [![codebeat badge](https://codebeat.co/badges/802c6149-ac2d-4514-8648-f618c63a8d9e)](https://codebeat.co/projects/github-com-meltwater-drone-cache-master) [![](https://images.microbadger.com/badges/image/meltwater/drone-cache.svg)](https://microbadger.com/images/meltwater/drone-cache) [![](https://images.microbadger.com/badges/version/meltwater/drone-cache.svg)](https://microbadger.com/images/meltwater/drone-cache)
+[![semver](https://img.shields.io/badge/semver-1.0.4-blue.svg?cacheSeconds=2592000)](https://github.com/meltwater/drone-cache/releases) [![Drone](https://cloud.drone.io/api/badges/meltwater/drone-cache/status.svg)](https://cloud.drone.io/meltwater/drone-cache) [![Maintenance](https://img.shields.io/maintenance/yes/2020.svg)](https://github.com/meltwater/drone-cache/commits/master) [![Go Doc](https://godoc.org/github.com/meltwater/drone-cache?status.svg)](http://godoc.org/github.com/meltwater/drone-cache) [![Go Report Card](https://goreportcard.com/badge/github.com/meltwater/drone-cache)](https://goreportcard.com/report/github.com/meltwater/drone-cache) [![codebeat badge](https://codebeat.co/badges/802c6149-ac2d-4514-8648-f618c63a8d9e)](https://codebeat.co/projects/github-com-meltwater-drone-cache-master) [![](https://images.microbadger.com/badges/image/meltwater/drone-cache.svg)](https://microbadger.com/images/meltwater/drone-cache) [![](https://images.microbadger.com/badges/version/meltwater/drone-cache.svg)](https://microbadger.com/images/meltwater/drone-cache)
 
 <p align="center"><img src="images/drone_gopher.png" width="400"></p>
 
 A Drone plugin for caching current workspace files between builds to reduce your build times. `drone-cache` is a small CLI program, written in Go without any external OS dependencies (such as tar, etc).
 
-With `drone-cache`, you can provide your **own cache key templates**, specify **archive format** (tar, tar.gz, etc) and you can use **an S3 bucket, Azure Storage, Google Cloud Storage or a mounted volume** as storage for your cached files, even better you can implement **your own storage backend** to cover your use case.
+With `drone-cache`, you can provide your **own cache key templates**, specify **archive format** (tar, tar.gz, etc) and you can use [**popular object storage**](#supported-storage-backends) as storage for your cached files, even better you can implement **your custom storage backend** to cover your use case.
 
 For detailed usage information and a list of available options please take a look at [usage](#usage) and [examples](#example-usage-of-drone-cache). If you want to learn more about custom cache keys, see [cache key templates](docs/cache_key_templates.md).
 
 If you want to learn more about the story behind `drone-cache`, you can read our blogpost [Making Drone Builds 10 Times Faster!](https://underthehood.meltwater.com/blog/2019/04/10/making-drone-builds-10-times-faster/)!
 
+## Supported Storage Backends
+
+* [AWS S3](https://aws.amazon.com/s3/)
+  * [Configuration](#)
+  * [Example](#)
+* [Azure Storage](https://azure.microsoft.com/en-us/services/storage/blobs/)
+  * [Configuration](#)
+  * [Example](#)
+* [Google Cloud Storage](https://cloud.google.com/storage/)
+  * [Configuration](#)
+  * [Example](#)
+* or any mounted local volume
+  * [Configuration](#)
+  * [Example](#)
+
 ## How does it work
 
 `drone-cache` stores mounted directories and files under a key at the specified backend (by default S3).
 
-Use this plugin to cache data that makes your builds faster. In the case of a cache miss or zero cache restore it will fail silently in won't break your running pipeline.
+Use this plugin to cache data that makes your builds faster. In the case of a _cache miss_ or an _empty cache_ restore it will fail silently in won't break your running pipeline.
 
 The best example would be to use this with your package managers such as Mix, Bundler or Maven. After your initial download, you can build a cache and then you can restore that cache in your next build.
 
 <p align="center"><img src="images/diagram.png" width="400"></p>
 
-With restored dependencies from a cache, commands like `mix deps.get` will only need to download new dependencies, rather than re-download every package on each and every build.
+With restored dependencies from a cache, commands like `mix deps.get` will only need to download new dependencies, rather than re-download every package on each build.
 
 ## Example Usage of drone-cache
 
-The following `.drone.yml` configuration show the most common use of drone-cache.
+The following example configuration file (`.drone.yml`) shows the most common use of drone-cache.
 
 Note: These configs use drone 1.0 syntax. If you are using drone 0.8, check the examples in [docs/examples/drone-0.8.md](docs/examples/drone-0.8.md).
 
+[//]: # (TODO: Move to a dedicated directory in docs, per backend!)
 ### Simple (Storing the cache in S3)
 
 ```yaml
@@ -190,6 +206,7 @@ $ docker run --rm \
 
 ### Local set-up
 
+[//]: # (TODO: Make setup)
 ```console
 $ ./scripts/setup_dev_environment.sh
 ```
@@ -200,17 +217,11 @@ $ ./scripts/setup_dev_environment.sh
 $ make test
 ```
 
-OR
-
-```console
-$ docker-compose up -d
-$ go test ./..
-```
-
 ### Build Binary
 
 Build the binary with the following commands:
 
+[//]: # (TODO: Make build)
 ```console
 $ go build .
 ```
@@ -225,7 +236,7 @@ $ make container
 
 ## Releases
 
-Release management handled by CI pipeline. When you create a tag on `master` branch, CI handles the rest.
+Release management handled by the CI pipeline. When you create a tag on `master` branch, CI handles the rest.
 
 You can find released artifacts (binaries, code, archives) under [releases](https://github.com/meltwater/drone-cache/releases).
 
@@ -233,25 +244,27 @@ You can find released images at [DockerHub](https://hub.docker.com/r/meltwater/d
 
 **PLEASE DO NOT INTRODUCE BREAKING CHANGES**
 
-> Keep in mind that users usually use the image tagged with `latest` in their pipeline, please make sure you do not interfere with their working workflow.
+> Keep in mind that users usually use the image tagged with `latest` in their pipeline, please make sure you do not interfere with their working workflow. Latest stable releases will be tagged with the `latest`.
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/meltwater/drone-cache/tags).
+`drone-cache` uses [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/meltwater/drone-cache/tags).
+
+As the versioning scheme dictates, `drone-cache` respects _backward compatibility_ within the major versions. However, the project only offers guarantees regarding the command-line interface (flags and environment variables). **Any exported public package can change its API.**
 
 ## Authors and Acknowledgement
 
-- [@dim](https://github.com/dim) - Thanks for [original work](https://github.com/bsm/drone-s3-cache)!
-- [@kakkoyun](https://github.com/kakkoyun)
-- [@salimane](https://github.com/salimane)
-- [@AdamGlazerMW](https://github.com/AdamGlazerMW) - Special thanks to Adam for the amazing artwork!
+See the list of [all contributors](https://github.com/meltwater/drone-cache/graphs/contributors).
 
-Also see the list of [all contributors](https://github.com/meltwater/drone-cache/graphs/contributors).
+- [@dim](https://github.com/dim) - Thanks for [original work](https://github.com/bsm/drone-s3-cache)!
+- [@AdamGlazerMW](https://github.com/AdamGlazerMW) - Special thanks to Adam for the amazing artwork!
 
 ### Inspiration
 
 - [github.com/bsm/drone-s3-cache](https://github.com/bsm/drone-s3-cache) (original work)
 - [github.com/Drillster/drone-volume-cache](https://github.com/Drillster/drone-volume-cache)
+- [github.com/drone/drone-cache-lib](https://github.com/drone/drone-cache-lib)
+  > From the version `v1.1.0` and forward, `drone-cache` conforms interfaces from `github.com/drone/drone-cache-lib`, with anticipation of [a future cache plugin interface in the configuration](https://github.com/drone/drone/issues/2060).
 
 ## Contributing
 
@@ -259,9 +272,9 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) to understand how to submit pull 
 
 ## Future work
 
-We keep all ideas for new features and bug reports in [github.com/meltwater/drone-cache/issues](https://github.com/meltwater/drone-cache/issues).
+All ideas for new features and bug reports will be kept in [github.com/meltwater/drone-cache/issues](https://github.com/meltwater/drone-cache/issues).
 
-One bigger area of future investment is to build a couple of [new storage backends](https://github.com/meltwater/drone-cache/labels/storage-backend) for caching the workspace files.
+One bigger area of future investment is to add a couple of [new storage backends](https://github.com/meltwater/drone-cache/labels/storage-backend) for caching the workspace files.
 
 ## License and Copyright
 
