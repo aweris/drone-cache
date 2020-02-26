@@ -8,13 +8,18 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/cache"
-	"github.com/meltwater/drone-cache/cache/archive"
 	"github.com/meltwater/drone-cache/cache/key"
 	keygen "github.com/meltwater/drone-cache/cache/key/generator"
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/storage"
 	"github.com/meltwater/drone-cache/storage/backend"
+	"github.com/meltwater/drone-cache/storage/backend/azure"
+	"github.com/meltwater/drone-cache/storage/backend/filesystem"
+	"github.com/meltwater/drone-cache/storage/backend/gcs"
+	"github.com/meltwater/drone-cache/storage/backend/s3"
+	"github.com/meltwater/drone-cache/storage/backend/sftp"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -36,11 +41,11 @@ type (
 
 		Mount []string
 
-		S3         backend.S3Config
-		FileSystem backend.FileSystemConfig
-		SFTP       backend.SFTPConfig
-		Azure      backend.AzureConfig
-		GCS        backend.GCSConfig
+		S3         s3.Config
+		FileSystem filesystem.Config
+		SFTP       sftp.Config
+		Azure      azure.Config
+		GCS        gcs.Config
 	}
 
 	// Plugin stores metadata about current plugin.

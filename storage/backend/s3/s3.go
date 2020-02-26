@@ -6,8 +6,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/meltwater/drone-cache/storage/backend"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,7 +14,6 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
-// s3Backend is an S3 implementation of the Backend
 type s3Backend struct {
 	bucket     string
 	acl        string
@@ -24,12 +21,8 @@ type s3Backend struct {
 	client     *s3.S3
 }
 
-// New creates an S3 backend
-func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
-	level.Warn(l).Log("msg", "using aws s3 as backend")
-	l = log.With(l, "backend", backend.S3)
-	c := cfgs.S3
-
+// New creates an S3 backend.
+func New(l log.Logger, c Config, debug bool) (*s3Backend, error) {
 	awsConf := &aws.Config{
 		Region:           aws.String(c.Region),
 		Endpoint:         &c.Endpoint,
@@ -45,7 +38,7 @@ func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
 
 	level.Debug(l).Log("msg", "s3 backend", "config", fmt.Sprintf("%#v", c))
 
-	if cfgs.Debug {
+	if debug {
 		awsConf.WithLogLevel(aws.LogDebugWithHTTPBody)
 	}
 
@@ -83,6 +76,10 @@ func (c *s3Backend) Put(ctx context.Context, p string, src io.ReadSeeker) error 
 	if c.encryption != "" {
 		in.ServerSideEncryption = aws.String(c.encryption)
 	}
+
+	// TODO: !! Implement streaming upload.
+	// storage/backend/s3/s3.go:74:3: cannot use src (type io.Reader) as type io.ReadSeeker in field value:
+	// io.Reader does not implement io.ReadSeeker (missing Seek method)
 
 	if _, err := c.client.PutObject(in); err != nil {
 		return fmt.Errorf("put the object %w", err)

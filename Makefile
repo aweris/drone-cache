@@ -18,6 +18,10 @@ LICHE_BIN=$(GOPATH)/bin/liche
 default: drone-cache
 all: drone-cache
 
+.PHONY: setup
+setup:
+	./scripts/setup_dev_environment.sh
+
 drone-cache: vendor main.go $(wildcard *.go) $(wildcard */*.go)
 	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o $@ .
 

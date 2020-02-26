@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/meltwater/drone-cache/cache/archive/tar"
+	"github.com/meltwater/drone-cache/archive/tar"
 
 	"github.com/go-kit/kit/log"
 )

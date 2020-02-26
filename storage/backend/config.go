@@ -1,13 +1,21 @@
 package backend
 
+import (
+	"github.com/meltwater/drone-cache/storage/backend/azure"
+	"github.com/meltwater/drone-cache/storage/backend/filesystem"
+	"github.com/meltwater/drone-cache/storage/backend/gcs"
+	"github.com/meltwater/drone-cache/storage/backend/s3"
+	"github.com/meltwater/drone-cache/storage/backend/sftp"
+)
+
 type Configs struct {
 	Debug bool
 
-	S3         S3Config
-	FileSystem FileSystemConfig
-	SFTP       SFTPConfig
-	Azure      AzureConfig
-	GCS        GCSConfig
+	S3         s3.Config
+	FileSystem filesystem.Config
+	SFTP       sftp.Config
+	Azure      azure.Config
+	GCS        gcs.Config
 }
 
 // Config configures behavior of Backend.
@@ -29,35 +37,35 @@ func WithDebug(b bool) Config {
 }
 
 // WithS3 sets debug flag.
-func WithS3(cfg S3Config) Config {
+func WithS3(cfg s3.Config) Config {
 	return configFunc(func(c *Configs) {
 		c.S3 = cfg
 	})
 }
 
 // WithFileSystem sets debug flag.
-func WithFileSystem(cfg FileSystemConfig) Config {
+func WithFileSystem(cfg filesystem.Config) Config {
 	return configFunc(func(c *Configs) {
 		c.FileSystem = cfg
 	})
 }
 
 // WithAzure sets debug flag.
-func WithAzure(cfg AzureConfig) Config {
+func WithAzure(cfg azure.Config) Config {
 	return configFunc(func(c *Configs) {
 		c.Azure = cfg
 	})
 }
 
 // WithSFTP sets debug flag.
-func WithSFTP(cfg SFTPConfig) Config {
+func WithSFTP(cfg sftp.Config) Config {
 	return configFunc(func(c *Configs) {
 		c.SFTP = cfg
 	})
 }
 
 // WithGCS sets debug flag.
-func WithGCS(cfg GCSConfig) Config {
+func WithGCS(cfg gcs.Config) Config {
 	return configFunc(func(c *Configs) {
 		c.GCS = cfg
 	})

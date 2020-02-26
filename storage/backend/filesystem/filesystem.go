@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/meltwater/drone-cache/storage/backend"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 )
@@ -23,11 +21,7 @@ type filesystem struct {
 }
 
 // New creates a filesystem backend.
-func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
-	level.Warn(l).Log("msg", "using filesystem as backend")
-	l = log.With(l, "backend", backend.FileSystem)
-	c := cfgs.FileSystem
-
+func New(l log.Logger, c Config) (*filesystem, error) {
 	if strings.TrimRight(path.Clean(c.CacheRoot), "/") == "" {
 		return nil, fmt.Errorf("empty or root path given, <%s> as cache root, ", c.CacheRoot)
 	}
@@ -51,8 +45,8 @@ func (c *filesystem) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	return os.Open(absPath)
 }
 
-// Put uploads the contents of the io.ReadSeeker.
-func (c *filesystem) Put(ctx context.Context, p string, src io.ReadSeeker) error {
+// Put uploads the contents of the io.Reader.
+func (c *filesystem) Put(ctx context.Context, p string, src io.Reader) error {
 	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
 	if err != nil {
 		return fmt.Errorf("build path %w", err)
@@ -70,7 +64,7 @@ func (c *filesystem) Put(ctx context.Context, p string, src io.ReadSeeker) error
 	defer dst.Close()
 
 	if _, err := io.Copy(dst, src); err != nil {
-		return fmt.Errorf("write read seeker as file %w", err)
+		return fmt.Errorf("write contents of reader to a file %w", err)
 	}
 
 	return nil

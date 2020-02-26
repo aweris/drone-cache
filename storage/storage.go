@@ -15,14 +15,8 @@ import (
 	"github.com/meltwater/drone-cache/storage/backend/sftp"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 )
-
-// FileEntry defines a single cache item.
-type FileEntry struct {
-	Path         string
-	Size         int64
-	LastModified time.Time
-}
 
 // Storage is a place that files can be written to and read from.
 type Storage interface {
@@ -31,21 +25,61 @@ type Storage interface {
 	// Put writes contents of io.Reader to remote storage at given key location.
 	Put(p string, src io.Reader) error
 	// List lists contents of the given directory by given key from remote storage.
-	List(p string) ([]FileEntry, error)
+	List(p string) ([]backend.FileEntry, error)
 	// Delete deletes the object from remote storage.
 	Delete(p string) error
 }
 
+// FromConfig creates new Storage by initializing corresponding backend using given configuration.
+func FromConfig(l log.Logger, backedType string, cfgs ...backend.Config) (Storage, error) {
+	configs := backend.Configs{}
+	for _, c := range cfgs {
+		c.Apply(&configs)
+	}
+
+	var b backend.Backend
+	var err error
+	switch backedType {
+	case backend.Azure:
+		level.Warn(l).Log("msg", "using azure blob as backend")
+		b, err = azure.New(log.With(l, "backend", backend.Azure), cfgs.Azure)
+	case backend.S3:
+		level.Warn(l).Log("msg", "using aws s3 as backend")
+		b, err = s3.New(log.With(l, "backend", backend.S3), cfgs.S3, cfgs.Debug)
+	case backend.GCS:
+		level.Warn(l).Log("msg", "using gc storage as backend")
+		b, err = gcs.New(log.With(l, "backend", backend.GCS), cfgs.GCS)
+	case backend.FileSystem:
+		level.Warn(l).Log("msg", "using filesystem as backend")
+		b, err = filesystem.New(log.With(l, "backend", backend.FileSystem), cfgs.FileSystem)
+	case backend.SFTP:
+		level.Warn(l).Log("msg", "using sftp as backend")
+		b, err = sftp.New(log.With(l, "backend", backend.SFTP), cfgs.SFTP)
+	default:
+		return nil, errors.New("unknown backend")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("initialize backend: %w", err)
+	}
+
+	// TODO: Parametric timeout value from CLI.
+	// With defaults!
+	return newStorage(b, 30*time.Second), nil
+}
+
+// Default Storage implementation.
 type storage struct {
 	b       backend.Backend
 	timeout time.Duration
 }
 
-func newStorage(b backend.Backend) *storage {
-	// TODO: Parametric timeout value.
-	return &storage{b, 30 * time.Second}
+// newStorage create a new deafult storage.
+func newStorage(b backend.Backend, timeout time.Duration) *storage {
+	return &storage{b, timeout}
 }
 
+// Get writes contents of the given object with given key from remote storage to io.Writer.
 func (s *storage) Get(p string, dst io.Writer) error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
@@ -64,6 +98,7 @@ func (s *storage) Get(p string, dst io.Writer) error {
 	return nil
 }
 
+// Put writes contents of io.Reader to remote storage at given key location.
 func (s *storage) Put(p string, src io.Reader) error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
@@ -71,45 +106,14 @@ func (s *storage) Put(p string, src io.Reader) error {
 	return s.b.Put(ctx, p, src)
 }
 
-//nolint:godox
-func (s *storage) List(p string) ([]FileEntry, error) {
-	// TODO: Implement!
+// List lists contents of the given directory by given key from remote storage.
+func (s *storage) List(p string) ([]backend.FileEntry, error) {
+	// TODO: Implement me!
 	return []FileEntry{}, nil
 }
 
-//nolint:godox
+// Delete deletes the object from remote storage.
 func (s *storage) Delete(p string) error {
-	// TODO: Implement!
+	// TODO: Implement me!
 	return nil
-}
-
-// FromConfig creates new Storage by initializing corresponding backend using given configuration.
-func FromConfig(l log.Logger, backedType string, cfgs ...backend.Config) (Storage, error) {
-	configs := backend.Configs{}
-	for _, c := range cfgs {
-		c.Apply(&configs)
-	}
-
-	var b backend.Backend
-	var err error
-	switch backedType {
-	case backend.Azure:
-		b, err = azure.New(l, configs)
-	case backend.S3:
-		b, err = s3.New(l, configs)
-	case backend.GCS:
-		b, err = gcs.New(l, configs)
-	case backend.FileSystem:
-		b, err = filesystem.New(l, configs)
-	case backend.SFTP:
-		b, err = sftp.New(l, configs)
-	default:
-		return nil, errors.New("unknown backend")
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("initialize backend: %w", err)
-	}
-
-	return newStorage(b), nil
 }

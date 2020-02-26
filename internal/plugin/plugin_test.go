@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/meltwater/drone-cache/cache/archive"
+	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/storage/backend"
+	"github.com/meltwater/drone-cache/storage/backend/s3"
 
 	"github.com/go-kit/kit/log"
 	"github.com/minio/minio-go"
@@ -530,7 +531,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 				CacheRoot: "../../testdata/cache",
 			},
 
-			S3: backend.S3Config{
+			S3: s3.Config{
 				ACL:        "private",
 				Bucket:     bucket,
 				Encryption: "",

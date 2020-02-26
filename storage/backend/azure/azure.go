@@ -6,8 +6,6 @@ import (
 	"io"
 	"net/url"
 
-	"github.com/meltwater/drone-cache/storage/backend"
-
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -15,16 +13,12 @@ import (
 
 type azureBackend struct {
 	logger       log.Logger
-	cfg          backend.AzureConfig
+	cfg          Config
 	containerURL azblob.ContainerURL
 }
 
 // New creates an AzureBlob backend.
-func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
-	level.Warn(l).Log("msg", "using azure blob as backend")
-	l = log.With(l, "backend", backend.Azure)
-	c := cfgs.Azure
-
+func New(l log.Logger, c Config) (*azureBackend, error) {
 	// 1. From the Azure portal, get your storage account name and key and set environment variables.
 	accountName, accountKey := c.AccountName, c.AccountKey
 	if len(accountName) == 0 || len(accountKey) == 0 {
@@ -77,11 +71,21 @@ func (c *azureBackend) Get(ctx context.Context, p string) (io.ReadCloser, error)
 	return bodyStream, nil
 }
 
-// Put uploads the contents of the io.ReadSeeker
-func (c *azureBackend) Put(ctx context.Context, p string, src io.ReadSeeker) error {
+// Put uploads the contents of the io.Reader.
+func (c *azureBackend) Put(ctx context.Context, p string, src io.Reader) error {
 	blobURL := c.containerURL.NewBlockBlobURL(p)
 
 	c.logger.Log("msg", "uploading the file with blob", "name", p)
+
+	// TODO: !! Implement streaming upload.
+	// storage/backend/azure/azure.go:88:26: cannot use src (type io.Reader) as type io.ReadSeeker in argument to blobURL.Upload:
+	// io.Reader does not implement io.ReadSeeker (missing Seek method)
+	// if _, err = azblob.UploadStreamToBlockBlob(ctx, r, blobURL,
+	// 	azblob.UploadStreamToBlockBlobOptions{
+	// 		BufferSize: 3 * 1024 * 1024,
+	// 		MaxBuffers: 4,
+	// 	},
+	// )
 
 	_, err := blobURL.Upload(ctx, src, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
 	if err != nil {

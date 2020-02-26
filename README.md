@@ -206,9 +206,8 @@ $ docker run --rm \
 
 ### Local set-up
 
-[//]: # (TODO: Make setup)
 ```console
-$ ./scripts/setup_dev_environment.sh
+$ make setup
 ```
 
 ### Tests
@@ -221,9 +220,8 @@ $ make test
 
 Build the binary with the following commands:
 
-[//]: # (TODO: Make build)
 ```console
-$ go build .
+$ make build
 ```
 
 ### Build Docker image

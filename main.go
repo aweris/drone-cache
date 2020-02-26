@@ -5,7 +5,7 @@ import (
 	stdlog "log"
 	"os"
 
-	"github.com/meltwater/drone-cache/cache/archive"
+	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/internal"
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/internal/plugin"
@@ -459,7 +459,7 @@ func run(c *cli.Context) error {
 			CacheRoot: c.String("filesystem-cache-root"),
 		},
 
-		S3: backend.S3Config{
+		S3: s3.Config{
 			ACL:        c.String("acl"),
 			Bucket:     c.String("bucket"),
 			Encryption: c.String("encryption"),
@@ -470,7 +470,7 @@ func run(c *cli.Context) error {
 			Secret:     c.String("secret-key"),
 		},
 
-		Azure: backend.AzureConfig{
+		Azure: azure.Config{
 			AccountName:    c.String("azure-account-name"),
 			AccountKey:     c.String("azure-account-key"),
 			ContainerName:  c.String("azure-container-name"),
@@ -478,7 +478,7 @@ func run(c *cli.Context) error {
 			Azurite:        false,
 		},
 
-		SFTP: backend.SFTPConfig{
+		SFTP: sftp.Config{
 			CacheRoot: c.String("sftp-cache-root"),
 			Username:  c.String("sftp-username"),
 			Host:      c.String("sftp-host"),
@@ -490,7 +490,7 @@ func run(c *cli.Context) error {
 			},
 		},
 
-		GCS: backend.GCSConfig{
+		GCS: gcs.Config{
 			Bucket:     c.String("bucket"),
 			Encryption: c.String("encryption"),
 			Endpoint:   c.String("endpoint"),

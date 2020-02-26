@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"io"
 
+	gcstorage "cloud.google.com/go/storage"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/meltwater/drone-cache/storage/backend"
-
-	gcstorage "cloud.google.com/go/storage"
 	"google.golang.org/api/option"
 )
 
@@ -22,11 +20,7 @@ type gcsBackend struct {
 }
 
 // New creates a Google Cloud Storage backend.
-func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
-	level.Warn(l).Log("msg", "using gc storage as backend")
-	l = log.With(l, "backend", backend.GCS)
-	c := cfgs.GCS
-
+func New(l log.Logger, c Config) (*gcsBackend, error) {
 	var opts []option.ClientOption
 	if c.APIKey != "" {
 		opts = append(opts, option.WithAPIKey(c.APIKey))
@@ -36,9 +30,7 @@ func New(l log.Logger, cfgs backend.Configs) (backend.Backend, error) {
 		opts = append(opts, option.WithEndpoint(c.Endpoint))
 	}
 
-	if cfgs.Debug {
-		level.Debug(l).Log("msg", "gc storage backend", "config", fmt.Sprintf("%+v", c))
-	}
+	level.Debug(l).Log("msg", "gc storage backend", "config", fmt.Sprintf("%+v", c))
 
 	client, err := gcstorage.NewClient(context.Background(), opts...)
 	if err != nil {
@@ -65,8 +57,8 @@ func (c *gcsBackend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	return obj.NewReader(ctx)
 }
 
-// Put uploads the contents of the io.ReadSeeker.
-func (c *gcsBackend) Put(ctx context.Context, p string, src io.ReadSeeker) error {
+// Put uploads the contents of the io.Reader.
+func (c *gcsBackend) Put(ctx context.Context, p string, src io.Reader) error {
 	bkt := c.client.Bucket(c.bucket)
 
 	obj := bkt.Object(p)
@@ -75,6 +67,7 @@ func (c *gcsBackend) Put(ctx context.Context, p string, src io.ReadSeeker) error
 	}
 
 	w := obj.NewWriter(ctx)
+	defer w.Close() // TODO:
 	_, err := io.Copy(w, src)
 
 	return err
