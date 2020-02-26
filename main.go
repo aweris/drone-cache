@@ -10,6 +10,11 @@ import (
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/internal/plugin"
 	"github.com/meltwater/drone-cache/storage/backend"
+	"github.com/meltwater/drone-cache/storage/backend/azure"
+	"github.com/meltwater/drone-cache/storage/backend/filesystem"
+	"github.com/meltwater/drone-cache/storage/backend/gcs"
+	"github.com/meltwater/drone-cache/storage/backend/s3"
+	"github.com/meltwater/drone-cache/storage/backend/sftp"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -404,11 +409,9 @@ func run(c *cli.Context) error {
 	if c.Bool("debug") {
 		logLevel = internal.LogLevelDebug
 	}
-
 	logger := internal.NewLogger(logLevel, c.String("log.format"), "drone-cache")
 
 	plg := plugin.New(log.With(logger, "component", "plugin"))
-
 	plg.Metadata = metadata.Metadata{
 		Repo: metadata.Repo{
 			Namespace: c.String("repo.namespace"),
@@ -455,7 +458,7 @@ func run(c *cli.Context) error {
 		Rebuild:          c.Bool("rebuild"),
 		Restore:          c.Bool("restore"),
 
-		FileSystem: backend.FileSystemConfig{
+		FileSystem: filesystem.Config{
 			CacheRoot: c.String("filesystem-cache-root"),
 		},
 
@@ -483,10 +486,10 @@ func run(c *cli.Context) error {
 			Username:  c.String("sftp-username"),
 			Host:      c.String("sftp-host"),
 			Port:      c.String("sftp-port"),
-			Auth: backend.SSHAuth{
+			Auth: sftp.SSHAuth{
 				Password:      c.String("sftp-password"),
 				PublicKeyFile: c.String("sftp-public-key-file"),
-				Method:        backend.SSHAuthMethod(c.String("sftp-auth-method")),
+				Method:        sftp.SSHAuthMethod(c.String("sftp-auth-method")),
 			},
 		},
 

@@ -5,18 +5,28 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/meltwater/drone-cache/archive"
+	"github.com/meltwater/drone-cache/internal/metadata"
+	"github.com/meltwater/drone-cache/key"
 	"github.com/meltwater/drone-cache/storage"
 )
 
 // Cache defines Cache functionality and stores configuration.
 type Cache interface {
-	Push(src, dst string) error
-	Pull(src, dst string) error
+	// Push(src, dst string) error
+	// Pull(src, dst string) error
+
+	// Rebuild TODO
+	Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error
+
+	// Restore TODO
+	Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error
 }
 
 type cache struct {
@@ -24,19 +34,111 @@ type cache struct {
 
 	a archive.Archive
 	s storage.Storage
+	g key.Generator
 }
 
 // New creates a new cache with given parameters.
-func New(logger log.Logger, s storage.Storage, a archive.Archive) *cache {
+func New(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator) *cache {
 	return &cache{
 		logger: log.With(logger, "component", "cache"),
 		a:      a,
 		s:      s,
+		g:      g,
 	}
 }
 
-// Push pushes the archived file to the cache.
-func (c *cache) Push(src, dst string) error {
+func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error {
+	level.Info(c.logger).Log("msg", "rebuilding cache")
+
+	// TODO: Do this for each mounted path!!
+	// TODO: Abstract!
+	pr, pw := io.Pipe()
+	defer pr.Close()
+
+	done := make(chan struct{})
+	defer close(done)
+
+	go func() {
+		defer pw.Close()
+		defer close(done)
+
+		if err := c.a.Create(src, pw); err != nil {
+			pr.CloseWithError(err) // TODO: Wrap
+		}
+	}()
+
+	// WriteCloser? Make sure not exit before writer finishes!!
+	if err := s.Put(dst, pr); err != nil {
+		pw.CloseWithError(err) // TODO: Wrap
+		return err
+	}
+
+	<-done
+
+	return nil
+}
+
+func (c *cache) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error {
+	level.Info(c.logger).Log("msg", "restoring  cache")
+
+	// TODO: Do this for each mounted path!!
+	// TODO: Abstract!
+	pr, pw := io.Pipe()
+
+	done := make(chan struct{})
+	defer close(done)
+
+	go func() {
+		defer pw.Close()
+		defer close(done)
+
+		if err := c.s.Get(src, pw); err != nil {
+			pr.CloseWithError(err) // TODO: Wrap
+		}
+	}()
+
+	// Make sure not exit before writer finishes!!
+	if err := c.a.Extract("", pr); err != nil {
+		pw.CloseWithError(err) // TODO: Wrap
+		return err
+	}
+
+	<-done
+
+	return nil
+}
+
+// processRebuild the remote cache from the local environment
+func processRebuild(l log.Logger, c cache.Cache, g key.Generator, cacheKeyTmpl string, m metadata.Metadata, mountedDirs []string) error {
+	now := time.Now()
+	branch := m.Commit.Branch
+
+	for _, mount := range mountedDirs {
+		if _, err := os.Stat(mount); err != nil {
+			return fmt.Errorf("mount <%s>, make sure file or directory exists and readable %w", mount, err)
+		}
+
+		key, err := g.Generate(cacheKeyTmpl, mount, branch)
+		if err != nil {
+			return fmt.Errorf("generate cache key %w", err)
+		}
+
+		path := filepath.Join(m.Repo.Name, key)
+
+		level.Info(l).Log("msg", "rebuilding cache for directory", "local", mount, "remote", path)
+
+		if err := c.Push(mount, path); err != nil {
+			return fmt.Errorf("upload %w", err)
+		}
+	}
+
+	level.Info(l).Log("msg", "cache built", "took", time.Since(now))
+
+	return nil
+}
+
+// push pushes the archived file to the cache.
+func (c *cache) push(src, dst string) error {
 	// 1. check if source is reachable.
 	src, err := filepath.Abs(filepath.Clean(src))
 	if err != nil {
@@ -80,8 +182,32 @@ func (c *cache) Push(src, dst string) error {
 	return nil
 }
 
-// Pull fetches the archived file from the cache and restores to the host machine's file system.
-func (c *cache) Pull(src, dst string) error {
+// processRestore the local environment from the remote cache.
+func processRestore(l log.Logger, c cache.Cache, g key.Generator, cacheKeyTmpl string, m metadata.Metadata, mountedDirs []string) error {
+	now := time.Now()
+	branch := m.Commit.Branch
+
+	for _, mount := range mountedDirs {
+		key, err := g.Generate(cacheKeyTmpl, mount, branch)
+		if err != nil {
+			return fmt.Errorf("generate cache key %w", err)
+		}
+
+		path := filepath.Join(m.Repo.Name, key)
+		level.Info(l).Log("msg", "restoring directory", "local", mount, "remote", path)
+
+		if err := c.Pull(path, mount); err != nil {
+			return fmt.Errorf("download %w", err)
+		}
+	}
+
+	level.Info(l).Log("msg", "cache restored", "took", time.Since(now))
+
+	return nil
+}
+
+// pull fetches the archived file from the cache and restores to the host machine's file system.
+func (c *cache) pull(src, dst string) error {
 	level.Info(c.logger).Log("msg", "downloading archived directory", "src", src)
 
 	// 1. download archive

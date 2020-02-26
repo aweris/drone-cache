@@ -23,9 +23,15 @@ type FileEntry struct {
 
 // Backend implements operations for caching files.
 type Backend interface {
+	// Get TODO
 	Get(ctx context.Context, p string) (io.ReadCloser, error)
+
+	// Put TODO
 	Put(ctx context.Context, p string, rs io.Reader) error
+
 	// TODO: Implement!
 	// List(ctx context.Context, p string) ([]FileEntry, error)
+
+	// TODO: Implement!
 	// Delete(ctx context.Context, p string) error
 }

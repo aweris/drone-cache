@@ -22,10 +22,13 @@ import (
 type Storage interface {
 	// Get writes contents of the given object with given key from remote storage to io.Writer.
 	Get(p string, dst io.Writer) error
+
 	// Put writes contents of io.Reader to remote storage at given key location.
 	Put(p string, src io.Reader) error
+
 	// List lists contents of the given directory by given key from remote storage.
 	List(p string) ([]backend.FileEntry, error)
+
 	// Delete deletes the object from remote storage.
 	Delete(p string) error
 }
@@ -81,6 +84,7 @@ func newStorage(b backend.Backend, timeout time.Duration) *storage {
 
 // Get writes contents of the given object with given key from remote storage to io.Writer.
 func (s *storage) Get(p string, dst io.Writer) error {
+	// TODO: Make sure consumer utilizes context.
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
 
@@ -100,6 +104,7 @@ func (s *storage) Get(p string, dst io.Writer) error {
 
 // Put writes contents of io.Reader to remote storage at given key location.
 func (s *storage) Put(p string, src io.Reader) error {
+	// TODO: Make sure consumer utilizes context.
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
 
@@ -109,11 +114,13 @@ func (s *storage) Put(p string, src io.Reader) error {
 // List lists contents of the given directory by given key from remote storage.
 func (s *storage) List(p string) ([]backend.FileEntry, error) {
 	// TODO: Implement me!
+	// TODO: Make sure consumer utilizes context.
 	return []FileEntry{}, nil
 }
 
 // Delete deletes the object from remote storage.
 func (s *storage) Delete(p string) error {
 	// TODO: Implement me!
+	// TODO: Make sure consumer utilizes context.
 	return nil
 }

@@ -5,64 +5,32 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/cache"
-	"github.com/meltwater/drone-cache/cache/key"
-	keygen "github.com/meltwater/drone-cache/cache/key/generator"
 	"github.com/meltwater/drone-cache/internal/metadata"
+	keygen "github.com/meltwater/drone-cache/key/generator"
 	"github.com/meltwater/drone-cache/storage"
 	"github.com/meltwater/drone-cache/storage/backend"
-	"github.com/meltwater/drone-cache/storage/backend/azure"
-	"github.com/meltwater/drone-cache/storage/backend/filesystem"
-	"github.com/meltwater/drone-cache/storage/backend/gcs"
-	"github.com/meltwater/drone-cache/storage/backend/s3"
-	"github.com/meltwater/drone-cache/storage/backend/sftp"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 )
 
-type (
-	// Config plugin-specific parameters and secrets.
-	Config struct {
-		ArchiveFormat    string
-		Backend          string
-		CacheKeyTemplate string
-
-		CompressionLevel int
-
-		Debug        bool
-		SkipSymlinks bool
-		Rebuild      bool
-		Restore      bool
-
-		Mount []string
-
-		S3         s3.Config
-		FileSystem filesystem.Config
-		SFTP       sftp.Config
-		Azure      azure.Config
-		GCS        gcs.Config
-	}
-
-	// Plugin stores metadata about current plugin.
-	Plugin struct {
-		logger log.Logger
-
-		Metadata metadata.Metadata
-		Config   Config
-	}
-
-	// Error recognized error from plugin.
-	Error string
-)
+// Error recognized error from plugin.
+type Error string
 
 func (e Error) Error() string { return string(e) }
 
 func (e Error) Unwrap() error { return e }
+
+// Plugin stores metadata about current plugin.
+type Plugin struct {
+	logger log.Logger
+
+	Metadata metadata.Metadata
+	Config   Config
+}
 
 func New(logger log.Logger) *Plugin {
 	return &Plugin{logger: logger}
@@ -88,14 +56,15 @@ func (p *Plugin) Exec() error {
 		return errors.New("rebuild and restore are mutually exclusive, please set only one of them")
 	}
 
-	g := keygen.New(p.logger, p.Metadata)
+	generator := keygen.New(p.logger, p.Metadata)
 
-	_, err := g.ParseTemplate(cfg.CacheKeyTemplate)
+	_, err := generator.ParseTemplate(cfg.CacheKeyTemplate)
 	if err != nil {
 		return fmt.Errorf("parse, <%s> as cache key template, falling back to default %w", cfg.CacheKeyTemplate, err)
 	}
 
-	// 2. Initialize backend
+	// TODO: Refactor optional args.
+	// 2. Initialize storage.
 	storage, err := storage.FromConfig(p.logger, cfg.Backend,
 		backend.WithDebug(cfg.Debug),
 		backend.WithAzure(cfg.Azure),
@@ -108,79 +77,30 @@ func (p *Plugin) Exec() error {
 		return fmt.Errorf("initialize, <%s> as backend %w", cfg.Backend, err)
 	}
 
-	// 3. Initialize cache
-	c := cache.New(p.logger, storage,
+	// 3. Initialize cache.
+	c := cache.New(p.logger,
+		storage,
 		archive.FromFormat(p.logger, cfg.ArchiveFormat,
 			archive.WithSkipSymlinks(cfg.SkipSymlinks),
 			archive.WithCompressionLevel(cfg.CompressionLevel),
 		),
+		generator,
 	)
 
 	// 4. Select mode
 	if cfg.Rebuild {
-		if err := processRebuild(p.logger, c, g, p.Config.CacheKeyTemplate, p.Metadata, p.Config.Mount); err != nil {
+		if err := c.Rebuild(p.Config.Mount, p.Config.CacheKeyTemplate); err != nil {
+			level.Debug(p.logger).Log("err", fmt.Sprintf("%+v\n", err))
 			return Error(fmt.Sprintf("[IMPORTANT] build cache, process rebuild failed, %v\n", err))
 		}
 	}
 
 	if cfg.Restore {
-		if err := processRestore(p.logger, c, g, p.Config.CacheKeyTemplate, p.Metadata, p.Config.Mount); err != nil {
+		if err := c.Restore(p.Config.Mount, p.Config.CacheKeyTemplate); err != nil {
+			level.Debug(p.logger).Log("err", fmt.Sprintf("%+v\n", err))
 			return Error(fmt.Sprintf("[IMPORTANT] restore cache, process restore failed, %v\n", err))
 		}
 	}
-
-	return nil
-}
-
-// processRebuild the remote cache from the local environment
-func processRebuild(l log.Logger, c cache.Cache, g key.Generator, cacheKeyTmpl string, m metadata.Metadata, mountedDirs []string) error {
-	now := time.Now()
-	branch := m.Commit.Branch
-
-	for _, mount := range mountedDirs {
-		if _, err := os.Stat(mount); err != nil {
-			return fmt.Errorf("mount <%s>, make sure file or directory exists and readable %w", mount, err)
-		}
-
-		key, err := g.Generate(cacheKeyTmpl, mount, branch)
-		if err != nil {
-			return fmt.Errorf("generate cache key %w", err)
-		}
-
-		path := filepath.Join(m.Repo.Name, key)
-
-		level.Info(l).Log("msg", "rebuilding cache for directory", "local", mount, "remote", path)
-
-		if err := c.Push(mount, path); err != nil {
-			return fmt.Errorf("upload %w", err)
-		}
-	}
-
-	level.Info(l).Log("msg", "cache built", "took", time.Since(now))
-
-	return nil
-}
-
-// processRestore the local environment from the remote cache.
-func processRestore(l log.Logger, c cache.Cache, g key.Generator, cacheKeyTmpl string, m metadata.Metadata, mountedDirs []string) error {
-	now := time.Now()
-	branch := m.Commit.Branch
-
-	for _, mount := range mountedDirs {
-		key, err := g.Generate(cacheKeyTmpl, mount, branch)
-		if err != nil {
-			return fmt.Errorf("generate cache key %w", err)
-		}
-
-		path := filepath.Join(m.Repo.Name, key)
-		level.Info(l).Log("msg", "restoring directory", "local", mount, "remote", path)
-
-		if err := c.Pull(path, mount); err != nil {
-			return fmt.Errorf("download %w", err)
-		}
-	}
-
-	level.Info(l).Log("msg", "cache restored", "took", time.Since(now))
 
 	return nil
 }
