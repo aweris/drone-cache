@@ -14,6 +14,8 @@ const (
 	GCS        = "gcs"
 )
 
+// TODO: Find a better place.
+
 // FileEntry defines a single cache item.
 type FileEntry struct {
 	Path         string

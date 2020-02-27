@@ -14,15 +14,18 @@ type Config struct {
 	Backend          string
 	CacheKeyTemplate string
 
-	CompressionLevel int
+	// Modes
+	Debug   bool
+	Rebuild bool
+	Restore bool
 
-	Debug        bool
-	SkipSymlinks bool
-	Rebuild      bool
-	Restore      bool
+	// Optional
+	SkipSymlinks     bool
+	CompressionLevel int
 
 	Mount []string
 
+	// Backend
 	S3         s3.Config
 	FileSystem filesystem.Config
 	SFTP       sftp.Config

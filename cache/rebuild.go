@@ -1,7 +1,111 @@
 package cache
 
+import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/go-kit/kit/log/level"
+)
+
 // Rebuilder TODO
 type Rebuilder interface {
 	// Rebuild TODO
 	Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error
+}
+
+// Rebuild TODO
+func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error {
+	level.Info(c.logger).Log("msg", "rebuilding cache")
+	now := time.Now()
+
+	key, err := c.generateKey(keyTempl)
+	if err != nil {
+		fmt.Errorf("generate key %w", err)
+	}
+
+	var wg sync.WaitGroup
+
+	errs := make(chan error, len(srcs))
+	defer close(errs)
+
+	for _, src := range srcs {
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("source <%s>, make sure file or directory exists and readable %w", src, err)
+		}
+
+		dst := filepath.Join(c.namespace, key, src)
+
+		level.Info(c.logger).Log("msg", "rebuilding cache for directory", "local", src, "remote", dst)
+
+		wg.Add(1)
+		go func(dst, src string) {
+			defer wg.Done()
+
+			if err := c.rebuild(src, dst); err != nil {
+				errs <- fmt.Errorf("upload from <%s> to <%s> %w", src, dst, err)
+			}
+		}(dst, src)
+	}
+
+	wg.Wait()
+
+	if err := <-errs; err != nil {
+		return fmt.Errorf("rebuild failed %w", err)
+	}
+
+	level.Info(c.logger).Log("msg", "cache built", "took", time.Since(now))
+
+	return nil
+
+}
+
+// rebuild pushes the archived file to the cache.
+func (c *cache) rebuild(src, dst string) error {
+	src, err := filepath.Abs(filepath.Clean(src))
+	if err != nil {
+		return fmt.Errorf("read source directory %w", err)
+	}
+
+	pr, pw := io.Pipe()
+	defer pr.Close()
+
+	done := make(chan struct{})
+	defer close(done)
+
+	go func() {
+		defer pw.Close()
+		defer close(done)
+
+		level.Info(c.logger).Log("msg", "archiving directory", "src", src)
+
+		written, err := c.a.Create(src, pw)
+		if err != nil {
+			pw.CloseWithError(fmt.Errorf("archive write, pipe writer failed %w", err))
+		}
+
+		// TODO: Calculate stats!
+		level.Debug(c.logger).Log(
+			"msg", "archive created",
+			"local", src,
+			"remote", dst,
+			"raw size", written,
+			// "compressed size", stat.Size(),
+			// "compression ratio %", written/stat.Size()*100,
+		)
+	}()
+
+	level.Info(c.logger).Log("msg", "uploading archived directory", "local", src, "remote", dst)
+
+	// WriteCloser? Make sure not exit before writer finishes!!
+	if err := c.s.Put(dst, pr); err != nil {
+		return pr.CloseWithError(fmt.Errorf("upload file <%s>, pipe reader failed %w", src, err))
+	}
+
+	<-done
+
+	return nil
 }

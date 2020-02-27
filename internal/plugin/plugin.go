@@ -52,11 +52,12 @@ func (p *Plugin) Exec() error {
 		level.Debug(p.logger).Log("msg", "plugin initialized with metadata", "metadata", fmt.Sprintf("%#v", p.Metadata))
 	}
 
+	// TODO: Add Flush
 	if cfg.Rebuild && cfg.Restore {
 		return errors.New("rebuild and restore are mutually exclusive, please set only one of them")
 	}
 
-	generator := keygen.New(p.logger, p.Metadata)
+	generator := keygen.NewMetadata(p.logger, p.Metadata)
 
 	_, err := generator.ParseTemplate(cfg.CacheKeyTemplate)
 	if err != nil {
@@ -85,6 +86,10 @@ func (p *Plugin) Exec() error {
 			archive.WithCompressionLevel(cfg.CompressionLevel),
 		),
 		generator,
+		// TODO: Document
+		cache.WithNamespace(p.Metadata.Repo.Name),
+		// TODO: Document
+		cache.WithFallbackGenerator(keygen.NewHash(p.Metadata.Commit.Branch)),
 	)
 
 	// 4. Select mode
@@ -101,6 +106,8 @@ func (p *Plugin) Exec() error {
 			return Error(fmt.Sprintf("[IMPORTANT] restore cache, process restore failed, %v\n", err))
 		}
 	}
+
+	// TODO: Add Flush
 
 	return nil
 }

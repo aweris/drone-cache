@@ -66,7 +66,7 @@ func (c *s3Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 }
 
 // Put uploads the contents of the io.ReadSeeker.
-func (c *s3Backend) Put(ctx context.Context, p string, src io.ReadSeeker) error {
+func (c *s3Backend) Put(ctx context.Context, p string, src io.Reader) error {
 	in := &s3.PutObjectInput{
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(p),

@@ -28,7 +28,7 @@ func New(l log.Logger, c Config) (*azureBackend, error) {
 	// 2. Create a default request pipeline using your storage account name and account key.
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		return nil, fmt.Errorf("azure, invalid credentials: %w", err)
+		return nil, fmt.Errorf("azure, invalid credentials %w", err)
 	}
 
 	var azureBlobURL *url.URL

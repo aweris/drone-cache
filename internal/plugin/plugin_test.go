@@ -10,6 +10,7 @@ import (
 	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/internal/metadata"
 	"github.com/meltwater/drone-cache/storage/backend"
+	"github.com/meltwater/drone-cache/storage/backend/filesystem"
 	"github.com/meltwater/drone-cache/storage/backend/s3"
 
 	"github.com/go-kit/kit/log"
@@ -527,7 +528,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 			Rebuild:          rebuild,
 			Restore:          restore,
 
-			FileSystem: backend.FileSystemConfig{
+			FileSystem: filesystem.Config{
 				CacheRoot: "../../testdata/cache",
 			},
 

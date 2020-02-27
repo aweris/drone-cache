@@ -45,25 +45,25 @@ func FromConfig(l log.Logger, backedType string, cfgs ...backend.Config) (Storag
 	switch backedType {
 	case backend.Azure:
 		level.Warn(l).Log("msg", "using azure blob as backend")
-		b, err = azure.New(log.With(l, "backend", backend.Azure), cfgs.Azure)
+		b, err = azure.New(log.With(l, "backend", backend.Azure), configs.Azure)
 	case backend.S3:
 		level.Warn(l).Log("msg", "using aws s3 as backend")
-		b, err = s3.New(log.With(l, "backend", backend.S3), cfgs.S3, cfgs.Debug)
+		b, err = s3.New(log.With(l, "backend", backend.S3), configs.S3, configs.Debug)
 	case backend.GCS:
 		level.Warn(l).Log("msg", "using gc storage as backend")
-		b, err = gcs.New(log.With(l, "backend", backend.GCS), cfgs.GCS)
+		b, err = gcs.New(log.With(l, "backend", backend.GCS), configs.GCS)
 	case backend.FileSystem:
 		level.Warn(l).Log("msg", "using filesystem as backend")
-		b, err = filesystem.New(log.With(l, "backend", backend.FileSystem), cfgs.FileSystem)
+		b, err = filesystem.New(log.With(l, "backend", backend.FileSystem), configs.FileSystem)
 	case backend.SFTP:
 		level.Warn(l).Log("msg", "using sftp as backend")
-		b, err = sftp.New(log.With(l, "backend", backend.SFTP), cfgs.SFTP)
+		b, err = sftp.New(log.With(l, "backend", backend.SFTP), configs.SFTP)
 	default:
 		return nil, errors.New("unknown backend")
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("initialize backend: %w", err)
+		return nil, fmt.Errorf("initialize backend %w", err)
 	}
 
 	// TODO: Parametric timeout value from CLI.
@@ -90,13 +90,13 @@ func (s *storage) Get(p string, dst io.Writer) error {
 
 	rc, err := s.b.Get(ctx, p)
 	if err != nil {
-		return fmt.Errorf("storage backend, Get: %w", err)
+		return fmt.Errorf("storage backend, Get %w", err)
 	}
 	defer rc.Close()
 
 	_, err = io.Copy(dst, rc)
 	if err != nil {
-		return fmt.Errorf("storage backend, Get: %w", err)
+		return fmt.Errorf("storage backend, Copy %w", err)
 	}
 
 	return nil
@@ -115,7 +115,7 @@ func (s *storage) Put(p string, src io.Reader) error {
 func (s *storage) List(p string) ([]backend.FileEntry, error) {
 	// TODO: Implement me!
 	// TODO: Make sure consumer utilizes context.
-	return []FileEntry{}, nil
+	return []backend.FileEntry{}, nil
 }
 
 // Delete deletes the object from remote storage.
