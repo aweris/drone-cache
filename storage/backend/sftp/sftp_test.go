@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"github.com/meltwater/drone-cache/storage/backend"
 )
 
 const defaultSFTPHost = "127.0.0.1"
@@ -18,20 +17,19 @@ var host = getEnv("TEST_SFTP_HOST", defaultSFTPHost)
 var port = getEnv("TEST_SFTP_PORT", defaultSFTPPort)
 
 func TestSFTPTruth(t *testing.T) {
-	cli, err := New(log.NewNopLogger(),
-		backend.Configs{
-			SFTP: backend.SFTPConfig{
-				CacheRoot: "/upload",
-				Username:  "foo",
-				Auth: backend.SSHAuth{
-					Password: "pass",
-					Method:   backend.SSHAuthMethodPassword,
-				},
-				Host: host,
-				Port: port,
+	cli, err := New(
+		log.NewNopLogger(),
+		Config{
+			CacheRoot: "/upload",
+			Username:  "foo",
+			Auth: SSHAuth{
+				Password: "pass",
+				Method:   SSHAuthMethodPassword,
 			},
-			Debug: true,
-		})
+			Host: host,
+			Port: port,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
