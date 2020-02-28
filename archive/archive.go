@@ -42,7 +42,7 @@ func FromFormat(logger log.Logger, format string, opts ...Option) Archive {
 
 	switch format {
 	case Gzip:
-		return gzip.New(logger, options.compressionLevel, options.skipSymlinks)
+		return gzip.New(logger, options.skipSymlinks, options.compressionLevel)
 	case Tar:
 		return tar.New(logger, options.skipSymlinks)
 	default:

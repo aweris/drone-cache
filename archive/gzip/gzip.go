@@ -18,7 +18,7 @@ type gzipArchive struct {
 }
 
 // New creates an archive that uses the .tar.gz file format.
-func New(logger log.Logger, compressionLevel int, skipSymlinks bool) *gzipArchive {
+func New(logger log.Logger, skipSymlinks bool, compressionLevel int) *gzipArchive {
 	return &gzipArchive{logger, compressionLevel, skipSymlinks}
 }
 
@@ -30,8 +30,6 @@ func (a *gzipArchive) Create(srcs []string, w io.Writer) (int64, error) {
 	}
 
 	defer gw.Close()
-
-	// TODO: Move compression ratio stats here!
 
 	return tar.New(a.logger, a.skipSymlinks).Create(srcs, gw)
 }
