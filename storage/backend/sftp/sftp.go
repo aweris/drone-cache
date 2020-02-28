@@ -92,7 +92,7 @@ func getSSHClient(c Config) (*ssh.Client, error) {
 	return client, nil
 }
 
-// TODO: parameterize only what it actualy needs
+// TODO: parameterize only what it actually needs
 func getAuthMethod(c Config) ([]ssh.AuthMethod, error) {
 	if c.Auth.Method == SSHAuthMethodPassword {
 		return []ssh.AuthMethod{

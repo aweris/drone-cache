@@ -20,6 +20,7 @@ func (h *hashGenerator) Generate(parts ...string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("generate hash key for mounted %w", err)
 	}
+
 	return key, nil
 }
 

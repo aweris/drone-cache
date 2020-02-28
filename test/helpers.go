@@ -12,7 +12,7 @@ import (
 
 // CreateTempFile TODO
 func CreateTempFile(t testing.TB, name string, content []byte) (string, func()) {
-	// t.Helper()
+	t.Helper()
 
 	tmpfile, err := ioutil.TempFile("", name+".*.testfile")
 	if err != nil {
@@ -32,7 +32,7 @@ func CreateTempFile(t testing.TB, name string, content []byte) (string, func()) 
 
 // CreateTempFileInDir TODO
 func CreateTempFilesInDir(t testing.TB, name string, content []byte) (string, func()) {
-	// t.Helper()
+	t.Helper()
 
 	tmpDir, err := ioutil.TempDir("", name+"-testdir-*")
 	if err != nil {
@@ -61,7 +61,7 @@ func CreateTempFilesInDir(t testing.TB, name string, content []byte) (string, fu
 
 // CreateTempDir TODO
 func CreateTempDir(t testing.TB, name string) (string, func()) {
-	// t.Helper()
+	t.Helper()
 
 	tmpDir, err := ioutil.TempDir("", name+"-testdir-*")
 	if err != nil {
@@ -86,9 +86,10 @@ func IsDir(path string) bool {
 // Expand TODO
 func Expand(src string) ([]string, error) {
 	paths := []string{}
+
 	if err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("walk %q: %v\n", path, err)
+			return fmt.Errorf("walk %q: %v", path, err)
 		}
 
 		if info.IsDir() {
@@ -98,7 +99,7 @@ func Expand(src string) ([]string, error) {
 		paths = append(paths, path)
 		return nil
 	}); err != nil {
-		return nil, fmt.Errorf("walking the path %q: %v\n", src, err)
+		return nil, fmt.Errorf("walking the path %q: %v", src, err)
 	}
 
 	return paths, nil

@@ -20,11 +20,12 @@ type Rebuilder interface {
 // Rebuild TODO
 func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error {
 	level.Info(c.logger).Log("msg", "rebuilding cache")
+
 	now := time.Now()
 
 	key, err := c.generateKey(keyTempl)
 	if err != nil {
-		fmt.Errorf("generate key %w", err)
+		return fmt.Errorf("generate key %w", err)
 	}
 
 	var wg sync.WaitGroup
@@ -42,6 +43,7 @@ func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 		level.Info(c.logger).Log("msg", "rebuilding cache for directory", "local", src, "remote", dst)
 
 		wg.Add(1)
+
 		go func(dst, src string) {
 			defer wg.Done()
 
@@ -60,7 +62,6 @@ func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 	level.Info(c.logger).Log("msg", "cache built", "took", time.Since(now))
 
 	return nil
-
 }
 
 // rebuild pushes the archived file to the cache.
@@ -74,6 +75,7 @@ func (c *cache) rebuild(src, dst string) error {
 	defer pr.Close()
 
 	// TODO: Might not be needed
+	// TODO: Error channel?
 	done := make(chan struct{})
 
 	go func() {
@@ -84,7 +86,9 @@ func (c *cache) rebuild(src, dst string) error {
 
 		written, err := c.a.Create([]string{src}, pw)
 		if err != nil {
-			pw.CloseWithError(fmt.Errorf("archive write, pipe writer failed %w", err))
+			if err := pw.CloseWithError(fmt.Errorf("archive write, pipe writer failed %w", err)); err != nil {
+				level.Error(c.logger).Log("msg", "pw close", "err", err)
+			}
 		}
 
 		// TODO: Calculate stats!
@@ -102,7 +106,12 @@ func (c *cache) rebuild(src, dst string) error {
 
 	// WriteCloser? Make sure not exit before writer finishes!!
 	if err := c.s.Put(dst, pr); err != nil {
-		return pr.CloseWithError(fmt.Errorf("upload file <%s>, pipe reader failed %w", src, err))
+		err = fmt.Errorf("upload file <%s>, pipe reader failed %w", src, err)
+		if err := pr.CloseWithError(err); err != nil {
+			level.Error(c.logger).Log("msg", "pr close", "err", err)
+		}
+
+		return err
 	}
 
 	<-done

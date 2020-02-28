@@ -36,12 +36,16 @@ type Storage interface {
 // FromConfig creates new Storage by initializing corresponding backend using given configuration.
 func FromConfig(l log.Logger, backedType string, cfgs ...backend.Config) (Storage, error) {
 	configs := backend.Configs{}
+
 	for _, c := range cfgs {
 		c.Apply(&configs)
 	}
 
-	var b backend.Backend
-	var err error
+	var (
+		b   backend.Backend
+		err error
+	)
+
 	switch backedType {
 	case backend.Azure:
 		level.Warn(l).Log("msg", "using azure blob as backend")
@@ -77,7 +81,7 @@ type storage struct {
 	timeout time.Duration
 }
 
-// newStorage create a new deafult storage.
+// newStorage create a new default storage.
 func newStorage(b backend.Backend, timeout time.Duration) *storage {
 	return &storage{b, timeout}
 }

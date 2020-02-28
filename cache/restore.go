@@ -19,11 +19,12 @@ type Restorer interface {
 // Restore TODO
 func (c *cache) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error {
 	level.Info(c.logger).Log("msg", "restoring  cache")
+
 	now := time.Now()
 
 	key, err := c.generateKey(keyTempl)
 	if err != nil {
-		fmt.Errorf("generate key %w", err)
+		return fmt.Errorf("generate key %w", err)
 	}
 
 	var wg sync.WaitGroup
@@ -37,6 +38,7 @@ func (c *cache) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 		level.Info(c.logger).Log("msg", "restoring directory", "local", src, "remote", dst)
 
 		wg.Add(1)
+
 		go func(dst, src string) {
 			defer wg.Done()
 
@@ -72,7 +74,9 @@ func (c *cache) restore(dst, src string) error {
 		level.Info(c.logger).Log("msg", "downloading archived directory", "remote", dst, "local", src)
 
 		if err := c.s.Get(dst, pw); err != nil { // TODO: do we have close anything?
-			pw.CloseWithError(fmt.Errorf("get file from storage backend, pipe writer failed %w", err))
+			if err := pw.CloseWithError(fmt.Errorf("get file from storage backend, pipe writer failed %w", err)); err != nil {
+				level.Error(c.logger).Log("msg", "pw close", "err", err)
+			}
 		}
 	}()
 
@@ -81,7 +85,12 @@ func (c *cache) restore(dst, src string) error {
 	// TODO: Make sure not exit before writer finishes!!
 	written, err := c.a.Extract(src, pr)
 	if err != nil {
-		return pr.CloseWithError(fmt.Errorf("extract files from downloaded archive, pipe reader failed %w", err))
+		err = fmt.Errorf("extract files from downloaded archive, pipe reader failed %w", err)
+		if err := pr.CloseWithError(err); err != nil {
+			level.Error(c.logger).Log("msg", "pr close", "err", err)
+		}
+
+		return err
 	}
 
 	<-done

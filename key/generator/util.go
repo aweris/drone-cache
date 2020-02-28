@@ -1,7 +1,7 @@
 package generator
 
 import (
-	"crypto/md5"
+	"crypto/md5" // #nosec
 	"fmt"
 	"io"
 )

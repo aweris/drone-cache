@@ -108,11 +108,12 @@ test-local: $(GOTEST_BIN)
 .PHONY: lint
 lint: $(GOLANGCI_LINT_BIN)
 	# Check .golangci.yml for configuration
-	$(GOLANGCI_LINT_BIN) run -v --enable-all -c .golangci.yml
+	# TODO: Re-enable disabled checks
+	$(GOLANGCI_LINT_BIN) run -v --enable-all --skip-dirs tmp -c .golangci.yml -D gomnd,godox,golint
 
 .PHONY: fix
 fix: $(GOLANGCI_LINT_BIN) format
-	$(GOLANGCI_LINT_BIN) run --fix --enable-all -c .golangci.yml
+	$(GOLANGCI_LINT_BIN) run --fix --enable-all --skip-dirs tmp -c .golangci.yml
 
 .PHONY: format
 format:

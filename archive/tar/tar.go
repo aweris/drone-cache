@@ -36,6 +36,7 @@ func (a *tarArchive) Create(srcs []string, w io.Writer) (int64, error) {
 	defer tw.Close()
 
 	var written int64
+
 	for _, src := range srcs {
 		if _, err := os.Stat(src); err != nil {
 			return written, fmt.Errorf("make sure file or directory readable <%s>: %v, %w", src, err, ErrSourceNotReachable)

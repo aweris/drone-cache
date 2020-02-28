@@ -356,7 +356,7 @@ func main() {
 			Name:   "azure-blob-max-retry-requets",
 			Usage:  "Azure Blob Storage Max Retry Requests",
 			EnvVar: "AZURE_BLOB_MAX_RETRY_REQUESTS",
-			Value:  4,
+			Value:  4, // TODO: magic number
 		},
 
 		// SFTP specific Config flags
@@ -409,6 +409,7 @@ func run(c *cli.Context) error {
 	if c.Bool("debug") {
 		logLevel = internal.LogLevelDebug
 	}
+
 	logger := internal.NewLogger(logLevel, c.String("log.format"), "drone-cache")
 
 	plg := plugin.New(log.With(logger, "component", "plugin"))

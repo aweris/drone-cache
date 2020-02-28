@@ -51,7 +51,7 @@ steps:
 
 ### Simple (Filesystem/Volume)
 
-NOTE: This will only be effective if your pipeline runs on the same agent each time (for example, if you are running drone in single-machine mode).
+NOTE: This will only be effective if your pipeline runs on the same agent each time (for example, if you are running the drone in single-machine mode).
 
 ```yaml
 kind: pipeline
