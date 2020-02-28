@@ -54,7 +54,7 @@ func New(l log.Logger, c Config) (*azureBackend, error) {
 		level.Debug(l).Log("msg", "container already exists", "err", err)
 	}
 
-	return &azureBackend{cfg: c, containerURL: containerURL}, nil
+	return &azureBackend{logger: l, cfg: c, containerURL: containerURL}, nil
 }
 
 // Get TODO

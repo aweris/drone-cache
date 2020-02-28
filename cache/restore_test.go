@@ -2,7 +2,7 @@ package cache
 
 import "testing"
 
-func Test(t *testing.T) {
+func TestRestore(t *testing.T) {
 	// TODO: Implement me!
 	t.Skip("skipping unimplemented test.")
 }
