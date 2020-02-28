@@ -62,6 +62,7 @@ func (c *cache) restore(dst, src string) error {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
+	// TODO: Might not be needed
 	done := make(chan struct{})
 
 	go func() {

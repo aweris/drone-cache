@@ -73,6 +73,7 @@ func (c *cache) rebuild(src, dst string) error {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
+	// TODO: Might not be needed
 	done := make(chan struct{})
 
 	go func() {
@@ -81,7 +82,7 @@ func (c *cache) rebuild(src, dst string) error {
 
 		level.Info(c.logger).Log("msg", "archiving directory", "src", src)
 
-		written, err := c.a.Create(src, pw)
+		written, err := c.a.Create([]string{src}, pw)
 		if err != nil {
 			pw.CloseWithError(fmt.Errorf("archive write, pipe writer failed %w", err))
 		}

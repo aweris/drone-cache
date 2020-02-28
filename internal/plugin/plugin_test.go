@@ -52,7 +52,7 @@ func TestRebuild(t *testing.T) {
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
-	file.Sync()
+	file.Sync() // Blocking!
 	file.Close()
 
 	absPath, err := filepath.Abs(fPath)
