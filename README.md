@@ -70,7 +70,7 @@ steps:
         - 'vendor'
 
   - name: build
-    image: golang:1.13-alpine
+    image: golang:1.14-alpine
     pull: true
     commands:
       - apk add --update make git

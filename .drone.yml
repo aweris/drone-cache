@@ -23,7 +23,7 @@ steps:
     - mc mb --region=eu-west-1 minio/drone-cache-bucket
 
 - name: build
-  image: golang:1.13-alpine
+  image: golang:1.14-alpine
   commands:
   - apk add --update make git
   - make drone-cache
@@ -31,7 +31,7 @@ steps:
     CGO_ENABLED: 0
 
 - name: test
-  image: golang:1.13-alpine
+  image: golang:1.14-alpine
   commands:
   - go test -v -mod=vendor -cover ./...
   environment:
@@ -44,7 +44,7 @@ steps:
     path: /drone/src/tmp/testdata/cache
 
 - name: lint
-  image: golang:1.13-alpine
+  image: golang:1.14-alpine
   commands:
   - "wget -O - -q https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.21.0"
   - ./bin/golangci-lint run -v --enable-all -D gochecknoglobals
@@ -265,13 +265,13 @@ steps:
     AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
 - name: build-after
-  image: golang:1.13-alpine
+  image: golang:1.14-alpine
   commands:
   - apk add --update make git
   - make drone-cache
 
 - name: test-after
-  image: golang:1.13-alpine
+  image: golang:1.14-alpine
   commands:
   - go test -v -mod=vendor -cover ./...
   environment:
