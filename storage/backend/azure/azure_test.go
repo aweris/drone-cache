@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
-	"github.com/meltwater/drone-cache/storage/backend"
 )
 
 const defaultBlobStorageURL = "127.0.0.1:10000"
@@ -20,16 +19,14 @@ func TestAzureTruth(t *testing.T) {
 
 	b, err := New(
 		log.NewNopLogger(),
-		backend.Configs{
-			Azure: backend.AzureConfig{
-				AccountName:    "devstoreaccount1",
-				AccountKey:     "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-				ContainerName:  "testcontainer",
-				BlobStorageURL: blobURL,
-				Azurite:        true,
-			},
-			Debug: true,
-		})
+		Config{
+			AccountName:    "devstoreaccount1",
+			AccountKey:     "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+			ContainerName:  "testcontainer",
+			BlobStorageURL: blobURL,
+			Azurite:        true,
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

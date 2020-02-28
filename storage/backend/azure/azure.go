@@ -77,18 +77,14 @@ func (c *azureBackend) Put(ctx context.Context, p string, src io.Reader) error {
 
 	c.logger.Log("msg", "uploading the file with blob", "name", p)
 
-	// TODO: !! Implement streaming upload.
-	// storage/backend/azure/azure.go:88:26: cannot use src (type io.Reader) as type io.ReadSeeker in argument to blobURL.Upload:
-	// io.Reader does not implement io.ReadSeeker (missing Seek method)
-	// if _, err = azblob.UploadStreamToBlockBlob(ctx, r, blobURL,
-	// 	azblob.UploadStreamToBlockBlobOptions{
-	// 		BufferSize: 3 * 1024 * 1024,
-	// 		MaxBuffers: 4,
-	// 	},
-	// )
-
-	_, err := blobURL.Upload(ctx, src, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
-	if err != nil {
+	// TODO: Check stream options!
+	// TODO: Test!
+	if _, err := azblob.UploadStreamToBlockBlob(ctx, src, blobURL,
+		azblob.UploadStreamToBlockBlobOptions{
+			BufferSize: 3 * 1024 * 1024,
+			MaxBuffers: 4,
+		},
+	); err != nil {
 		return fmt.Errorf("put the object %w", err)
 	}
 

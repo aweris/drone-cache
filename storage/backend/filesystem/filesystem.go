@@ -15,6 +15,8 @@ import (
 
 const defaultFileMode = 0755
 
+// TODO: Utilize context!
+
 // filesystem is an file system implementation of the Backend.
 type filesystem struct {
 	cacheRoot string

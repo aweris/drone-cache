@@ -84,6 +84,7 @@ func newStorage(b backend.Backend, timeout time.Duration) *storage {
 
 // Get writes contents of the given object with given key from remote storage to io.Writer.
 func (s *storage) Get(p string, dst io.Writer) error {
+	// TODO: Rethink backend.Get
 	// TODO: Make sure consumer utilizes context.
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()

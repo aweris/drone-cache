@@ -19,6 +19,8 @@ type sftpBackend struct {
 	client    *sftp.Client
 }
 
+// TODO: Utilize context!
+
 // New creates a new sFTP backend.
 func New(l log.Logger, c Config) (*sftpBackend, error) {
 	sshClient, err := getSSHClient(c)
@@ -70,7 +72,7 @@ func (s *sftpBackend) Put(ctx context.Context, path string, src io.Reader) error
 
 // Helpers
 
-// TODO: parameterize onl;y what it actuall needs
+// TODO: parameterize only what it actually needs
 func getSSHClient(c Config) (*ssh.Client, error) {
 	authMethod, err := getAuthMethod(c)
 	if err != nil {
@@ -90,7 +92,7 @@ func getSSHClient(c Config) (*ssh.Client, error) {
 	return client, nil
 }
 
-// TODO: parameterize onl;y what it actuall needs
+// TODO: parameterize only what it actualy needs
 func getAuthMethod(c Config) ([]ssh.AuthMethod, error) {
 	if c.Auth.Method == SSHAuthMethodPassword {
 		return []ssh.AuthMethod{

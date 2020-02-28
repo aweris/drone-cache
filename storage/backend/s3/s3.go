@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 )
@@ -54,34 +55,40 @@ func New(l log.Logger, c Config, debug bool) (*s3Backend, error) {
 
 // Get returns an io.Reader for reading the contents of the file.
 func (c *s3Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
-	out, err := c.client.GetObject(&s3.GetObjectInput{
+	// downloader := s3manager.NewDownloaderWithClient(c.client)
+	in := &s3.GetObjectInput{
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(p),
-	})
+	}
+
+	out, err := c.client.GetObjectWithContext(ctx, in)
 	if err != nil {
 		return nil, fmt.Errorf("get the object %w", err)
 	}
+
+	// if err := downloader.DownloadWithContext(ctx, io.WriterAt, in); err != nil {
+	// 	return nil, fmt.Errorf("get the object %w", err)
+	// }
 
 	return out.Body, nil
 }
 
 // Put uploads the contents of the io.ReadSeeker.
-func (c *s3Backend) Put(ctx context.Context, p string, src io.Reader) error {
-	in := &s3.PutObjectInput{
+func (c *s3Backend) Put(ctx context.Context, p string, r io.Reader) error {
+	uploader := s3manager.NewUploaderWithClient(c.client)
+	in := &s3manager.UploadInput{
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(p),
 		ACL:    aws.String(c.acl),
-		Body:   src,
+		Body:   r,
 	}
+
 	if c.encryption != "" {
 		in.ServerSideEncryption = aws.String(c.encryption)
 	}
 
-	// TODO: !! Implement streaming upload.
-	// storage/backend/s3/s3.go:74:3: cannot use src (type io.Reader) as type io.ReadSeeker in field value:
-	// io.Reader does not implement io.ReadSeeker (missing Seek method)
-
-	if _, err := c.client.PutObject(in); err != nil {
+	// TODO: Test!!
+	if _, err := uploader.UploadWithContext(ctx, in); err != nil {
 		return fmt.Errorf("put the object %w", err)
 	}
 
