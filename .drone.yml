@@ -41,7 +41,7 @@ steps:
     TEST_AZURITE_URL: azurite:10000
   volumes:
   - name: testdata
-    path: /drone/src/testdata/cache
+    path: /drone/src/tmp/testdata/cache
 
 - name: lint
   image: golang:1.13-alpine
@@ -281,7 +281,7 @@ steps:
     TEST_AZURITE_URL: azurite:10000
   volumes:
   - name: testdata
-    path: /drone/src/testdata/cache
+    path: /drone/src/tmp/testdata/cache
 
 services:
 - name: filestorage

@@ -529,7 +529,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 			Restore:          restore,
 
 			FileSystem: filesystem.Config{
-				CacheRoot: "../../testdata/cache",
+				CacheRoot: "../../tmp/testdata/cache",
 			},
 
 			S3: s3.Config{

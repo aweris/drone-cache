@@ -23,7 +23,7 @@ func New(logger log.Logger, compressionLevel int, skipSymlinks bool) *gzipArchiv
 }
 
 // Create writes content of the given source to an archive, returns written bytes.
-func (a *gzipArchive) Create(src string, w io.Writer) (int64, error) {
+func (a *gzipArchive) Create(srcs []string, w io.Writer) (int64, error) {
 	gw, err := gzip.NewWriterLevel(w, a.compressionLevel)
 	if err != nil {
 		return 0, fmt.Errorf("create archive writer %w", err)
@@ -31,7 +31,9 @@ func (a *gzipArchive) Create(src string, w io.Writer) (int64, error) {
 
 	defer gw.Close()
 
-	return tar.New(a.logger, a.skipSymlinks).Create(src, gw)
+	// TODO: Move compression ratio stats here!
+
+	return tar.New(a.logger, a.skipSymlinks).Create(srcs, gw)
 }
 
 // Extract reads content from the given archive reader and restores it to the destination, returns written bytes.

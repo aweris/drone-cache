@@ -96,13 +96,13 @@ container-push-dev: container-dev
 .PHONY: test
 test: $(GOTEST_BIN)
 	docker-compose up -d
-	mkdir -p ./testdata/cache
+	mkdir -p ./tmp/testdata/cache
 	gotest -race -short -cover ./...
 
 .PHONY: test-local
 test-local: $(GOTEST_BIN)
 	docker-compose up -d
-	mkdir -p ./testdata/cache
+	mkdir -p ./tmp/testdata/cache
 	gotest -race -cover -benchmem -v ./...
 
 .PHONY: lint

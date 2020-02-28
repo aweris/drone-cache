@@ -22,13 +22,15 @@ func New(logger log.Logger, skipSymlinks bool) *tarArchive {
 }
 
 // Create writes content of the given source to an archive, returns written bytes.
-func (a *tarArchive) Create(src string, w io.Writer) (int64, error) {
+func (a *tarArchive) Create(srcs []string, w io.Writer) (int64, error) {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
 	var written int64
-	if err := filepath.Walk(src, writeToArchive(tw, &written, a.skipSymlinks)); err != nil {
-		return written, fmt.Errorf("add all files to archive %w", err)
+	for _, src := range srcs {
+		if err := filepath.Walk(src, writeToArchive(tw, &written, a.skipSymlinks)); err != nil {
+			return written, fmt.Errorf("add all files to archive %w", err)
+		}
 	}
 
 	return written, nil
@@ -65,6 +67,7 @@ func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(stri
 
 		h.Name = path // to give absolute path
 		// TODO: header.Name = strings.TrimPrefix(filepath.ToSlash(path), "/")
+		// TODO: Clean?
 
 		if err := tw.WriteHeader(h); err != nil {
 			return fmt.Errorf("write header for <%s> %w", path, err)
@@ -84,8 +87,8 @@ func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(stri
 		}
 		// }
 
-		// TODO:
-		// *written += h.FileInfo().Size()
+		// TODO:Check!
+		*written += h.FileInfo().Size()
 		// *written += fi.Size()
 
 		return nil
@@ -248,7 +251,8 @@ func unlink(path string) error {
 	return nil
 }
 
+// TODO: Remove if unused
 func doesExist(path string) bool {
 	_, err := os.Stat(path)
-	return err == nil
+	return err == nil || os.IsNotExist(err)
 }

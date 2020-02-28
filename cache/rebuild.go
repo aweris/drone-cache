@@ -74,11 +74,10 @@ func (c *cache) rebuild(src, dst string) error {
 	defer pr.Close()
 
 	done := make(chan struct{})
-	defer close(done)
 
 	go func() {
-		defer pw.Close()
 		defer close(done)
+		defer pw.Close()
 
 		level.Info(c.logger).Log("msg", "archiving directory", "src", src)
 
