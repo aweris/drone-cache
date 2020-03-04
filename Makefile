@@ -23,11 +23,11 @@ setup:
 	./scripts/setup_dev_environment.sh
 
 drone-cache: vendor main.go $(wildcard *.go) $(wildcard */*.go)
-	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o $@ .
+	CGO_ENABLED=0 go build -mod=vendor -a -tags netgo -ldflags '-s -w -X main.version=$(VERSION)' -o $@ .
 
 .PHONY: build
-build: vendor main.go $(wildcard *.go) $(wildcard */*.go)
-	go build -mod=vendor -a -ldflags '-s -w -X main.version=$(VERSION)' -o drone-cache .
+build: main.go $(wildcard *.go) $(wildcard */*.go)
+	go build -mod=vendor -tags netgo -ldflags '-X main.version=$(VERSION)' -o drone-cache .
 
 .PHONY: release
 release: drone-cache $(GORELEASER_BIN)

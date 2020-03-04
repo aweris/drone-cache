@@ -4,6 +4,7 @@ before:
     - make vendor
 dist: target/dist
 builds:
+  # TODO: -tags netgo
 - env:
   - CGO_ENABLED=0
   goos:
