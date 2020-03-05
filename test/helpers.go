@@ -1,10 +1,8 @@
 package test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/mholt/archiver"
@@ -30,7 +28,7 @@ func CreateTempFile(t testing.TB, name string, content []byte) (string, func()) 
 	return tmpfile.Name(), func() { os.Remove(tmpfile.Name()) }
 }
 
-// CreateTempFileInDir TODO
+// CreateTempFilesInDir TODO
 func CreateTempFilesInDir(t testing.TB, name string, content []byte) (string, func()) {
 	t.Helper()
 
@@ -71,38 +69,6 @@ func CreateTempDir(t testing.TB, name string) (string, func()) {
 	return tmpDir, func() {
 		os.RemoveAll(tmpDir)
 	}
-}
-
-// IsDir TODO
-func IsDir(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-
-	return fi.IsDir()
-}
-
-// Expand TODO
-func Expand(src string) ([]string, error) {
-	paths := []string{}
-
-	if err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("walk %q: %v", path, err)
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		paths = append(paths, path)
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("walking the path %q: %v", src, err)
-	}
-
-	return paths, nil
 }
 
 // CreateArchive TODO

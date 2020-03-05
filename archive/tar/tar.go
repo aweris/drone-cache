@@ -15,6 +15,8 @@ import (
 var (
 	// ErrSourceNotReachable TODO
 	ErrSourceNotReachable = errors.New("source not reachable")
+	// ErrDestinationNotReachable TODO
+	ErrDestinationNotReachable = errors.New("destination not reachable")
 	// ErrArchiveNotReadable TODO
 	ErrArchiveNotReadable = errors.New("archive not readable")
 )
@@ -42,7 +44,7 @@ func (a *tarArchive) Create(srcs []string, w io.Writer) (int64, error) {
 			return written, fmt.Errorf("make sure file or directory readable <%s>: %v, %w", src, err, ErrSourceNotReachable)
 		}
 
-		if err := filepath.Walk(src, writeToArchive(tw, &written, a.skipSymlinks)); err != nil {
+		if err := filepath.Walk(src, writeToArchive(tw, src, a.skipSymlinks, &written)); err != nil {
 			return written, fmt.Errorf("add all files to archive: %w", err)
 		}
 	}
@@ -50,7 +52,7 @@ func (a *tarArchive) Create(srcs []string, w io.Writer) (int64, error) {
 	return written, nil
 }
 
-func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(string, os.FileInfo, error) error {
+func writeToArchive(tw *tar.Writer, rootSrc string, skipSymlinks bool, written *int64) func(string, os.FileInfo, error) error {
 	return func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -61,12 +63,12 @@ func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(stri
 		}
 
 		// Create header for Regular files and Directories
-		h, err := tar.FileInfoHeader(fi, fi.Name()) // Neware: Changed to fi.Name() as second arg or empty
+		h, err := tar.FileInfoHeader(fi, fi.Name())
 		if err != nil {
 			return fmt.Errorf("create header for <%s> %w", path, err)
 		}
 
-		if isSymlink(fi) { // fi.Mode()&os.ModeSymlink == os.ModeSymlink
+		if isSymlink(fi) {
 			if skipSymlinks {
 				return nil
 			}
@@ -77,8 +79,12 @@ func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(stri
 			}
 		}
 
-		// h.Name = path // to give absolute path
-		h.Name = strings.TrimPrefix(filepath.ToSlash(path), "/")
+		name, err := relativeName(rootSrc, path)
+		if err != nil {
+			return fmt.Errorf("relative name %w", err)
+		}
+
+		h.Name = strings.TrimPrefix(filepath.ToSlash(name), "/")
 
 		if err := tw.WriteHeader(h); err != nil {
 			return fmt.Errorf("write header for <%s> %w", path, err)
@@ -94,7 +100,6 @@ func writeToArchive(tw *tar.Writer, written *int64, skipSymlinks bool) func(stri
 		}
 
 		*written += n
-
 		// Alternatives:
 		// *written += h.FileInfo().Size()
 		// *written += fi.Size()
@@ -115,6 +120,24 @@ func createSymlinkHeader(fi os.FileInfo, path string) (*tar.Header, error) {
 	}
 
 	return h, nil
+}
+
+func relativeName(src, path string) (string, error) {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return "", fmt.Errorf("%s: stat: %v", src, err)
+	}
+
+	name := filepath.Base(path)
+	if srcInfo.IsDir() {
+		dir, err := filepath.Rel(filepath.Dir(src), filepath.Dir(path))
+		if err != nil {
+			return "", fmt.Errorf("relative path %q: %q %v", path, dir, err)
+		}
+		name = filepath.Join(filepath.ToSlash(dir), name)
+	}
+
+	return name, nil
 }
 
 func writeFileToArchive(tw io.Writer, path string) (int64, error) {
@@ -138,6 +161,11 @@ func isSymlink(fi os.FileInfo) bool {
 
 // Extract reads content from the given archive reader and restores it to the destination, returns written bytes.
 func (a *tarArchive) Extract(dst string, r io.Reader) (int64, error) {
+	if _, err := os.Stat(dst); err != nil {
+		// NOTice: Consider creating non-existing root destination.
+		return 0, fmt.Errorf("make sure destination directory exists <%s>: %v, %w", dst, err, ErrDestinationNotReachable)
+	}
+
 	var (
 		written int64
 		tr      = tar.NewReader(r)

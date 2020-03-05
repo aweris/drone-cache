@@ -26,7 +26,7 @@ builds:
     -X main.Version={{.Version}}
     -X main.DateBuilt={{.Date}}
   hooks:
-    post: find target/dist -name drone-cache -type f -exec upx {} +
+    post: find target/dist -name drone-cache -type f -exec upx -f --brute {} +
 archives:
   - id: tarball
     format: tar.gz

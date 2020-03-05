@@ -15,25 +15,6 @@ import (
 func TestCreate(t *testing.T) {
 	t.Parallel()
 
-	file, fileClean := test.CreateTempFile(t, "tar_create", []byte("hello\ndrone!\n")) // 13 bytes
-	t.Cleanup(fileClean)
-
-	symlink := filepath.Join(filepath.Dir(file), "symlink.testfile")
-	err := os.Symlink(file, symlink)
-	if err != nil {
-		t.Fatalf("link not created: %v", err)
-	}
-	t.Cleanup(func() { os.Remove(symlink) })
-
-	dir, dirClean := test.CreateTempFilesInDir(t, "tar_create", []byte("hello\ngo!\n")) // 10 bytes
-	t.Cleanup(dirClean)
-
-	dstDir, dstDirClean := test.CreateTempDir(t, "tar_create_destination")
-	t.Cleanup(dstDirClean)
-
-	extDir, extDirClean := test.CreateTempDir(t, "tar_create_extracted")
-	t.Cleanup(extDirClean)
-
 	for _, tc := range []struct {
 		name    string
 		ta      *tarArchive
@@ -59,23 +40,16 @@ func TestCreate(t *testing.T) {
 			err:     ErrSourceNotReachable, // os.ErrNotExist || os.ErrPermission
 		},
 		{
-			name: "existing mount paths",
-			ta:   New(log.NewNopLogger(), true),
-			srcs: []string{
-				file,
-				dir,
-			},
+			name:    "existing mount paths",
+			ta:      New(log.NewNopLogger(), true),
+			srcs:    exampleFileTree(t, "tar_create"),
 			written: 43, // 3 x tmpfile in dir, 1 tmpfile
 			err:     nil,
 		},
 		{
-			name: "existing mount paths with symbolic links",
-			ta:   New(log.NewNopLogger(), true),
-			srcs: []string{
-				file,
-				dir,
-				symlink,
-			},
+			name:    "existing mount paths with symbolic links",
+			ta:      New(log.NewNopLogger(), false),
+			srcs:    exampleFileTreeWithSymlinks(t, "tar_create_symlink"),
 			written: 43,
 			err:     nil,
 		},
@@ -84,20 +58,27 @@ func TestCreate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			archivePath := filepath.Join(dstDir, filepath.Clean(tc.name+".tar"))
+			// Setup
+			dstDir, dstDirClean := test.CreateTempDir(t, "tar_create_destination")
+			t.Cleanup(dstDirClean)
 
+			extDir, extDirClean := test.CreateTempDir(t, "tar_create_extracted")
+			t.Cleanup(extDirClean)
+
+			// Run
+			archivePath := filepath.Join(dstDir, filepath.Clean(tc.name+".tar"))
 			written, err := create(tc.ta, tc.srcs, archivePath)
 			if err != nil {
 				test.Expected(t, err, tc.err)
 				return
 			}
 
+			// Test
 			test.Exists(t, archivePath)
-			test.Assert(t, written == tc.written,
-				"case %q: written bytes got %d want %v", tc.name, written, tc.written)
+			test.Assert(t, written == tc.written, "case %q: written bytes got %d want %v", tc.name, written, tc.written)
 
 			test.Ok(t, test.ExtractArchive(archivePath, extDir))
-			test.EqualDirs(t, extDir, tc.srcs)
+			test.EqualDirs(t, extDir, os.TempDir(), tc.srcs)
 		})
 	}
 }
@@ -105,24 +86,20 @@ func TestCreate(t *testing.T) {
 func TestExtract(t *testing.T) {
 	t.Parallel()
 
-	file, fileClean := test.CreateTempFile(t, "tar_extract", []byte("hello\ndrone!\n")) // 13 bytes
-	t.Cleanup(fileClean)
-
-	symlink := filepath.Join(filepath.Dir(file), "symlink.testfile")
-	err := os.Symlink(file, symlink)
-	if err != nil {
-		t.Fatalf("link not created: %v", err)
-	}
-	t.Cleanup(func() { os.Remove(symlink) })
-
-	dir, dirClean := test.CreateTempFilesInDir(t, "tar_extract", []byte("hello\ngo!\n")) // 10 bytes
-	t.Cleanup(dirClean)
-
+	// Setup
 	arcDir, arcDirClean := test.CreateTempDir(t, "tar_extract_archive")
 	t.Cleanup(arcDirClean)
 
+	files := exampleFileTree(t, "tar_extract")
+
 	archivePath := filepath.Join(arcDir, "test.tar")
-	if err := test.CreateArchive([]string{file, dir}, archivePath); err != nil {
+	if err := test.CreateArchive(files, archivePath); err != nil {
+		t.Fatalf("test archive not created: %v", err)
+	}
+
+	filesWithSymlink := exampleFileTreeWithSymlinks(t, "tar_extract_symlink")
+	archiveWithSymlinkPath := filepath.Join(arcDir, "test_with_symlink.tar")
+	if err := test.CreateArchive(filesWithSymlink, archiveWithSymlinkPath); err != nil {
 		t.Fatalf("test archive not created: %v", err)
 	}
 
@@ -141,7 +118,6 @@ func TestExtract(t *testing.T) {
 		ta          *tarArchive
 		archivePath string
 		srcs        []string
-		content     []byte
 		written     int64
 		err         error
 	}{
@@ -150,16 +126,22 @@ func TestExtract(t *testing.T) {
 			ta:          New(log.NewNopLogger(), true),
 			archivePath: "iamnotexists",
 			srcs:        []string{},
-			content:     []byte(""),
 			written:     0,
 			err:         os.ErrNotExist,
+		},
+		{
+			name:        "non-existing root destination",
+			ta:          New(log.NewNopLogger(), true),
+			archivePath: emptyArchivePath,
+			srcs:        []string{},
+			written:     0,
+			err:         ErrDestinationNotReachable,
 		},
 		{
 			name:        "empty archive",
 			ta:          New(log.NewNopLogger(), true),
 			archivePath: emptyArchivePath,
 			srcs:        []string{},
-			content:     []byte(""),
 			written:     0,
 			err:         nil,
 		},
@@ -168,7 +150,6 @@ func TestExtract(t *testing.T) {
 			ta:          New(log.NewNopLogger(), true),
 			archivePath: badArchivePath,
 			srcs:        []string{},
-			content:     []byte(""),
 			written:     0,
 			err:         ErrArchiveNotReadable,
 		},
@@ -176,46 +157,37 @@ func TestExtract(t *testing.T) {
 			name:        "existing archive",
 			ta:          New(log.NewNopLogger(), true),
 			archivePath: archivePath,
-			srcs: []string{
-				file,
-				dir,
-			},
-			content: []byte(""),
-			written: 43,
-			err:     nil,
+			srcs:        files,
+			written:     43,
+			err:         nil,
 		},
 		{
 			name:        "existing archive with symbolic links",
-			ta:          New(log.NewNopLogger(), true),
-			archivePath: archivePath,
-			srcs: []string{
-				file,
-				dir,
-				symlink,
-			},
-			content: []byte(""),
-			written: 43,
-			err:     nil,
+			ta:          New(log.NewNopLogger(), false),
+			archivePath: archiveWithSymlinkPath,
+			srcs:        filesWithSymlink,
+			written:     43,
+			err:         nil,
 		},
 	} {
 		tc := tc // NOTE: https://github.com/golang/go/wiki/CommonMistakes#using-goroutines-on-loop-iterator-variables
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			dstDir, dstDirClean := test.CreateTempDir(t, "tar_extract_extracted")
+			// Setup
+			dstDir, dstDirClean := test.CreateTempDir(t, "tar_extract_extracted_"+tc.name)
 			t.Cleanup(dstDirClean)
 
+			// Run
 			written, err := extract(tc.ta, tc.archivePath, dstDir)
 			if err != nil {
 				test.Expected(t, err, tc.err)
 				return
 			}
 
-			test.Assert(t, written == tc.written,
-				"case %q: written bytes got %d want %v", tc.name, written, tc.written)
-
-			// TODO: Parked, known issue for relative paths
-			// test.EqualDirs(t, dstDir, tc.srcs)
+			// Test
+			test.Assert(t, written == tc.written, "case %q: written bytes got %d want %v", tc.name, written, tc.written)
+			test.EqualDirs(t, dstDir, os.TempDir(), tc.srcs)
 		})
 	}
 }
@@ -226,11 +198,8 @@ func create(a *tarArchive, srcs []string, dst string) (int64, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
-	done := make(chan struct{})
-
 	var written int64
 	go func(w *int64) {
-		defer close(done)
 		defer pw.Close()
 
 		written, err := a.Create(srcs, pw)
@@ -247,8 +216,6 @@ func create(a *tarArchive, srcs []string, dst string) (int64, error) {
 		return 0, err
 	}
 
-	<-done
-
 	if err := ioutil.WriteFile(dst, content, 0644); err != nil {
 		return 0, err
 	}
@@ -260,15 +227,12 @@ func extract(a *tarArchive, src string, dst string) (int64, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
-	done := make(chan struct{})
-
 	f, err := os.Open(src)
 	if err != nil {
 		return 0, err
 	}
 
 	go func() {
-		defer close(done)
 		defer pw.Close()
 
 		_, err = io.Copy(pw, f)
@@ -278,4 +242,33 @@ func extract(a *tarArchive, src string, dst string) (int64, error) {
 	}()
 
 	return a.Extract(dst, pr)
+}
+
+// Fixtures
+
+func exampleFileTree(t *testing.T, name string) []string {
+	file, fileClean := test.CreateTempFile(t, name, []byte("hello\ndrone!\n")) // 13 bytes
+	t.Cleanup(fileClean)
+
+	dir, dirClean := test.CreateTempFilesInDir(t, name, []byte("hello\ngo!\n")) // 10 bytes
+	t.Cleanup(dirClean)
+
+	return []string{file, dir}
+}
+
+func exampleFileTreeWithSymlinks(t *testing.T, name string) []string {
+	file, fileClean := test.CreateTempFile(t, name, []byte("hello\ndrone!\n")) // 13 bytes
+	t.Cleanup(fileClean)
+
+	symlink := filepath.Join(filepath.Dir(file), name+"_symlink.testfile")
+	err := os.Symlink(file, symlink)
+	if err != nil {
+		t.Fatalf("link not created: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(symlink) })
+
+	dir, dirClean := test.CreateTempFilesInDir(t, name, []byte("hello\ngo!\n")) // 10 bytes
+	t.Cleanup(dirClean)
+
+	return []string{file, dir, symlink}
 }

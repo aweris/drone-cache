@@ -109,7 +109,7 @@ test-local: $(GOTEST_BIN)
 lint: $(GOLANGCI_LINT_BIN)
 	# Check .golangci.yml for configuration
 	# TODO: Re-enable disabled checks
-	$(GOLANGCI_LINT_BIN) run -v --enable-all --skip-dirs tmp -c .golangci.yml -D gomnd,godox,golint
+	$(GOLANGCI_LINT_BIN) run -v --enable-all --skip-dirs tmp -c .golangci.yml -D gomnd,godox
 
 .PHONY: fix
 fix: $(GOLANGCI_LINT_BIN) format
