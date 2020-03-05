@@ -35,7 +35,7 @@ type cache struct {
 }
 
 // New creates a new cache with given parameters.
-func New(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator, opts ...Option) *cache {
+func New(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator, opts ...Option) Cache {
 	options := options{}
 
 	for _, o := range opts {
@@ -53,7 +53,7 @@ func New(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generato
 }
 
 // TODO: write a note to redirect traffic to related files??
-// or create structs and promote?
+// or create struct and promote?
 
 // Helpers
 

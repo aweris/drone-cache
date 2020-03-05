@@ -74,12 +74,7 @@ func (c *cache) rebuild(src, dst string) error {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
-	// TODO: Might not be needed
-	// TODO: Error channel?
-	done := make(chan struct{})
-
 	go func() {
-		defer close(done)
 		defer pw.Close()
 
 		level.Info(c.logger).Log("msg", "archiving directory", "src", src)
@@ -107,14 +102,13 @@ func (c *cache) rebuild(src, dst string) error {
 	// WriteCloser? Make sure not exit before writer finishes!!
 	if err := c.s.Put(dst, pr); err != nil {
 		err = fmt.Errorf("upload file <%s>, pipe reader failed %w", src, err)
+		// TODO: Introduce runutils ? ioutils to close and log error
 		if err := pr.CloseWithError(err); err != nil {
 			level.Error(c.logger).Log("msg", "pr close", "err", err)
 		}
 
 		return err
 	}
-
-	<-done
 
 	return nil
 }

@@ -64,11 +64,7 @@ func (c *cache) restore(dst, src string) error {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
-	// TODO: Might not be needed
-	done := make(chan struct{})
-
 	go func() {
-		defer close(done)
 		defer pw.Close()
 
 		level.Info(c.logger).Log("msg", "downloading archived directory", "remote", dst, "local", src)
@@ -86,14 +82,13 @@ func (c *cache) restore(dst, src string) error {
 	written, err := c.a.Extract(src, pr)
 	if err != nil {
 		err = fmt.Errorf("extract files from downloaded archive, pipe reader failed %w", err)
+		// TODO: Introduce runutils ? ioutils to close and log error
 		if err := pr.CloseWithError(err); err != nil {
 			level.Error(c.logger).Log("msg", "pr close", "err", err)
 		}
 
 		return err
 	}
-
-	<-done
 
 	level.Debug(c.logger).Log(
 		"msg", "archive extracted",
