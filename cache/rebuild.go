@@ -31,7 +31,6 @@ func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 	var wg sync.WaitGroup
 
 	errs := make(chan error, len(srcs))
-	defer close(errs)
 
 	for _, src := range srcs {
 		if _, err := os.Stat(src); err != nil {
@@ -54,6 +53,7 @@ func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 	}
 
 	wg.Wait()
+	close(errs)
 
 	if err := <-errs; err != nil {
 		return fmt.Errorf("rebuild failed %w", err)

@@ -30,7 +30,6 @@ func (c *cache) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 	var wg sync.WaitGroup
 
 	errs := make(chan error, len(srcs))
-	defer close(errs)
 
 	for _, src := range srcs {
 		dst := filepath.Join(c.namespace, key, src)
@@ -49,6 +48,7 @@ func (c *cache) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 	}
 
 	wg.Wait()
+	close(errs)
 
 	if err := <-errs; err != nil {
 		return fmt.Errorf("restore failed %w", err)

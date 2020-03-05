@@ -356,7 +356,7 @@ func main() {
 			Name:   "azure-blob-max-retry-requets",
 			Usage:  "Azure Blob Storage Max Retry Requests",
 			EnvVar: "AZURE_BLOB_MAX_RETRY_REQUESTS",
-			Value:  4, // TODO: magic number
+			Value:  4,
 		},
 
 		// SFTP specific Config flags

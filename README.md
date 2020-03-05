@@ -14,6 +14,7 @@ If you want to learn more about the story behind `drone-cache`, you can read our
 
 ## Supported Storage Backends
 
+# TODO: Add minio and ceph
 * [AWS S3](https://aws.amazon.com/s3/)
   * [Configuration](#)
   * [Example](#)

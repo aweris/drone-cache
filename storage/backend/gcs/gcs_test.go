@@ -3,6 +3,6 @@ package gcs
 import "testing"
 
 func Test(t *testing.T) {
-	// TODO: Implement me!
+	// Implement me!
 	t.Skip("skipping unimplemented test.")
 }

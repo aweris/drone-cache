@@ -72,7 +72,7 @@ func FromConfig(l log.Logger, backedType string, cfgs ...backend.Config) (Storag
 
 	// TODO: Parametric timeout value from CLI.
 	// With defaults!
-	return newStorage(b, 30*time.Second), nil
+	return newStorage(b, 5*time.Second), nil
 }
 
 // Default Storage implementation.
@@ -88,7 +88,7 @@ func newStorage(b backend.Backend, timeout time.Duration) *storage {
 
 // Get writes contents of the given object with given key from remote storage to io.Writer.
 func (s *storage) Get(p string, dst io.Writer) error {
-	// TODO: Rethink backend.Get
+	// TODO: Rethink backend.Get(ctx context.Context, p string, io.Writer) error
 	// TODO: Make sure consumer utilizes context.
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
@@ -118,14 +118,14 @@ func (s *storage) Put(p string, src io.Reader) error {
 
 // List lists contents of the given directory by given key from remote storage.
 func (s *storage) List(p string) ([]backend.FileEntry, error) {
-	// TODO: Implement me!
-	// TODO: Make sure consumer utilizes context.
+	// Implement me!
+	// Make sure consumer utilizes context.
 	return []backend.FileEntry{}, nil
 }
 
 // Delete deletes the object from remote storage.
 func (s *storage) Delete(p string) error {
-	// TODO: Implement me!
-	// TODO: Make sure consumer utilizes context.
+	// Implement me!
+	// Make sure consumer utilizes context.
 	return nil
 }

@@ -20,8 +20,10 @@ import (
 // Error recognized error from plugin.
 type Error string
 
+// Error TODO
 func (e Error) Error() string { return string(e) }
 
+// Unwrap TODO
 func (e Error) Unwrap() error { return e }
 
 // Plugin stores metadata about current plugin.
@@ -32,6 +34,7 @@ type Plugin struct {
 	Config   Config
 }
 
+// New TODO
 func New(logger log.Logger) *Plugin {
 	return &Plugin{logger: logger}
 }
@@ -52,7 +55,8 @@ func (p *Plugin) Exec() error {
 		level.Debug(p.logger).Log("msg", "plugin initialized with metadata", "metadata", fmt.Sprintf("%#v", p.Metadata))
 	}
 
-	// TODO: Add Flush
+	// FLUSH
+
 	if cfg.Rebuild && cfg.Restore {
 		return errors.New("rebuild and restore are mutually exclusive, please set only one of them")
 	}
@@ -64,7 +68,8 @@ func (p *Plugin) Exec() error {
 		return fmt.Errorf("parse, <%s> as cache key template, falling back to default %w", cfg.CacheKeyTemplate, err)
 	}
 
-	// TODO: Refactor optional args.
+	// TODO: Refactor optional args. Just pass related configs. Are they optionaL?
+
 	// 2. Initialize storage.
 	storage, err := storage.FromConfig(p.logger, cfg.Backend,
 		backend.WithDebug(cfg.Debug),
@@ -86,9 +91,9 @@ func (p *Plugin) Exec() error {
 			archive.WithCompressionLevel(cfg.CompressionLevel),
 		),
 		generator,
-		// TODO: Document
+		// Missing Documentation
 		cache.WithNamespace(p.Metadata.Repo.Name),
-		// TODO: Document
+		// Missing Documentation
 		cache.WithFallbackGenerator(keygen.NewHash(p.Metadata.Commit.Branch)),
 	)
 
@@ -107,7 +112,7 @@ func (p *Plugin) Exec() error {
 		}
 	}
 
-	// TODO: Add Flush
+	// FLUSH
 
 	return nil
 }

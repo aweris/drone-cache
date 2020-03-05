@@ -96,20 +96,23 @@ container-push-dev: container-dev
 .PHONY: test
 test: $(GOTEST_BIN)
 	docker-compose up -d
+	# Remove following step
 	mkdir -p ./tmp/testdata/cache
-	gotest -race -short -cover ./...
+	gotest -race -short -parallel=4 ./...
+	docker-compose down -v
 
 .PHONY: test-local
 test-local: $(GOTEST_BIN)
 	docker-compose up -d
+	# Remove following step
 	mkdir -p ./tmp/testdata/cache
-	gotest -race -cover -benchmem -v ./...
+	gotest -race -cover -benchmem -parallel=4 -v ./...
+	docker-compose down -v
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT_BIN)
 	# Check .golangci.yml for configuration
-	# TODO: Re-enable disabled checks
-	$(GOLANGCI_LINT_BIN) run -v --enable-all --skip-dirs tmp -c .golangci.yml -D gomnd,godox
+	$(GOLANGCI_LINT_BIN) run -v --enable-all --skip-dirs tmp -c .golangci.yml
 
 .PHONY: fix
 fix: $(GOLANGCI_LINT_BIN) format

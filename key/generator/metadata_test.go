@@ -9,6 +9,8 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
+	t.Parallel()
+
 	l := log.NewNopLogger()
 	g := MetadataGenerator{
 		logger: l,
@@ -48,6 +50,8 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestParseTemplate(t *testing.T) {
+	t.Parallel()
+
 	l := log.NewNopLogger()
 	g := MetadataGenerator{
 		logger: l,
@@ -76,17 +80,5 @@ func TestParseTemplate(t *testing.T) {
 				t.Errorf("parser template failed, error: %v\n", err)
 			}
 		})
-	}
-}
-
-func TestHash(t *testing.T) {
-	actual, err := hash("hash")
-	if err != nil {
-		t.Errorf("hash failed, error: %v\n", err)
-	}
-
-	expected := "0800fc577294c34e0b28ad2839435945"
-	if actual != expected {
-		t.Errorf("hash failed, got: %s, want: %s\n", actual, expected)
 	}
 }

@@ -3,6 +3,7 @@ package plugin
 import (
 	"crypto/rand"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,8 +22,7 @@ const (
 	defaultEndpoint        = "127.0.0.1:9000"
 	defaultAccessKey       = "AKIAIOSFODNN7EXAMPLE"
 	defaultSecretAccessKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-	bucket                 = "meltwater-drone-test"
-	region                 = "eu-west-1"
+	defaultRegion          = "eu-west-1"
 	useSSL                 = false
 )
 
@@ -33,34 +33,38 @@ var (
 )
 
 func TestRebuild(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	dirPath := "./tmp/1"
+	name := "drone-cache-test-rebuild"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
 	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	fPath := "./tmp/1/file_to_cache.txt"
+	fPath := filepath.Join(dirPath, "file_to_cache.txt")
 	file, fErr := os.Create(fPath)
 	if fErr != nil {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
-	file.Sync() // Blocking!
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	absPath, err := filepath.Abs(fPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	linkAbsPath, err := filepath.Abs("./tmp/1/symlink_to_cache.txt")
+	linkAbsPath, err := filepath.Abs(filepath.Join(dirPath, "symlink_to_cache.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +73,7 @@ func TestRebuild(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{dirPath}, "", "tar")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -77,34 +81,38 @@ func TestRebuild(t *testing.T) {
 }
 
 func TestRebuildSkipSymlinks(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	dirPath := "./tmp/1"
+	name := "drone-cache-test-rebuild-skip-symlink"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
 	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	fPath := "./tmp/1/file_to_cache.txt"
+	fPath := filepath.Join(dirPath, "file_to_cache.txt")
 	file, fErr := os.Create(fPath)
 	if fErr != nil {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	absPath, err := filepath.Abs(fPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	linkAbsPath, err := filepath.Abs("./tmp/1/symlink_to_cache.txt")
+	linkAbsPath, err := filepath.Abs(filepath.Join(dirPath, "symlink_to_cache.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +121,7 @@ func TestRebuildSkipSymlinks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "", "tar")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "", "tar")
 	plugin.Config.SkipSymlinks = true
 
 	if err := plugin.Exec(); err != nil {
@@ -122,27 +130,32 @@ func TestRebuildSkipSymlinks(t *testing.T) {
 }
 
 func TestRebuildWithCacheKey(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	if mkErr1 := os.MkdirAll("./tmp/1", 0755); mkErr1 != nil {
+	name := "drone-cache-test-rebuild-cache-key"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
+	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	file, fErr := os.Create("./tmp/1/file_to_cache.txt")
+	file, fErr := os.Create(filepath.Join(dirPath, "file_to_cache.txt"))
 	if fErr != nil {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "tar")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -150,27 +163,32 @@ func TestRebuildWithCacheKey(t *testing.T) {
 }
 
 func TestRebuildWithGzip(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	if mkErr1 := os.MkdirAll("./tmp/1", 0755); mkErr1 != nil {
+	name := "drone-cache-test-rebuild-with-gzip"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
+	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	file, fErr := os.Create("./tmp/1/file_to_cache.txt")
+	file, fErr := os.Create(filepath.Join(dirPath, "file_to_cache.txt"))
 	if fErr != nil {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -178,27 +196,32 @@ func TestRebuildWithGzip(t *testing.T) {
 }
 
 func TestRebuildWithFilesystem(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	if mkErr1 := os.MkdirAll("./tmp/1", 0755); mkErr1 != nil {
+	name := "drone-cache-test-rebuild-filesystem"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
+	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	file, fErr := os.Create("./tmp/1/file_to_cache.txt")
+	file, fErr := os.Create(filepath.Join(dirPath, "file_to_cache.txt"))
 	if fErr != nil {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	plugin := newTestPlugin(backend.FileSystem, true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(name, backend.FileSystem, true, false, []string{dirPath}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin exec failed, error: %v\n", err)
@@ -206,10 +229,13 @@ func TestRebuildWithFilesystem(t *testing.T) {
 }
 
 func TestRebuildNonExisting(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{"./nonexisting/path"}, "", "tar")
+	name := "drone-cache-test-rebuild-non-existing"
+	_, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{"./nonexisting/path"}, "", "tar")
 
 	if err := plugin.Exec(); err == nil {
 		t.Error("plugin exec did not fail as expected, error: <nil>")
@@ -217,10 +243,13 @@ func TestRebuildNonExisting(t *testing.T) {
 }
 
 func TestRestore(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	dirPath := "./tmp/1"
+	name := "drone-cache-test-restore"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -229,27 +258,28 @@ func TestRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fPath := "./tmp/1/file_to_cache.txt"
+	fPath := filepath.Join(dirPath, "file_to_cache.txt")
 	file, cErr := os.Create(fPath)
 	if cErr != nil {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	file1, fErr1 := os.Create("./tmp/1/file1_to_cache.txt")
+	file1, fErr1 := os.Create(filepath.Join(dirPath, "file1_to_cache.txt"))
 	if fErr1 != nil {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1*1024*1024)
+	content = make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -263,7 +293,7 @@ func TestRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	linkAbsPath, err := filepath.Abs("./tmp/1/symlink_to_cache.txt")
+	linkAbsPath, err := filepath.Abs(filepath.Join(dirPath, "symlink_to_cache.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +302,7 @@ func TestRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{dirPath}, "", "tar")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -288,15 +318,15 @@ func TestRestore(t *testing.T) {
 		t.Errorf("plugin (restore mode) exec failed, error: %v\n", err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file1_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file1_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 
-	target, err := os.Readlink("./tmp/1/symlink_to_cache.txt")
+	target, err := os.Readlink(filepath.Join(dirPath, "symlink_to_cache.txt"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -307,36 +337,41 @@ func TestRestore(t *testing.T) {
 }
 
 func TestRestoreWithCacheKey(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	if err := os.MkdirAll("./tmp/1", 0755); err != nil {
+	name := "drone-cache-test-restore-cache-key"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		t.Fatal(err)
 	}
 
-	file, cErr := os.Create("./tmp/1/file_to_cache.txt")
+	file, cErr := os.Create(filepath.Join(dirPath, "file_to_cache.txt"))
 	if cErr != nil {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	if mkErr1 := os.MkdirAll("./tmp/1", 0755); mkErr1 != nil {
+	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	file1, fErr1 := os.Create("./tmp/1/file1_to_cache.txt")
+	file1, fErr1 := os.Create(filepath.Join(dirPath, "file1_to_cache.txt"))
 	if fErr1 != nil {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1*1024*1024)
+	content = make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -345,7 +380,7 @@ func TestRestoreWithCacheKey(t *testing.T) {
 	file1.Sync()
 	file1.Close()
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "tar")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "{{ .Repo.Name }}_{{ .Commit.Branch }}_{{ .Build.Number }}", "tar")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -361,46 +396,51 @@ func TestRestoreWithCacheKey(t *testing.T) {
 		t.Errorf("plugin (restore mode) exec failed, error: %v\n", err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file1_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file1_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 }
 
 func TestRestoreWithGzip(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	if err := os.MkdirAll("./tmp/1", 0755); err != nil {
+	name := "drone-cache-test-restore-with-gzip"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		t.Fatal(err)
 	}
 
-	file, cErr := os.Create("./tmp/1/file_to_cache.txt")
+	file, cErr := os.Create(filepath.Join(dirPath, "file_to_cache.txt"))
 	if cErr != nil {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	if mkErr1 := os.MkdirAll("./tmp/1", 0755); mkErr1 != nil {
+	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	file1, fErr1 := os.Create("./tmp/1/file1_to_cache.txt")
+	file1, fErr1 := os.Create(filepath.Join(dirPath, "file1_to_cache.txt"))
 	if fErr1 != nil {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1*1024*1024)
+	content = make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -409,7 +449,7 @@ func TestRestoreWithGzip(t *testing.T) {
 	file1.Sync()
 	file1.Close()
 
-	plugin := newTestPlugin(backend.S3, true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(name, backend.S3, true, false, []string{dirPath}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -425,46 +465,51 @@ func TestRestoreWithGzip(t *testing.T) {
 		t.Errorf("plugin (restore mode) exec failed, error: %v\n", err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file1_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file1_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 }
 
 func TestRestoreWithFilesystem(t *testing.T) {
-	setup(t)
-	defer cleanUp(t)
+	t.Parallel()
 
-	if err := os.MkdirAll("./tmp/1", 0755); err != nil {
+	name := "drone-cache-test-restore-with-filesystem"
+	tmpDir, cleanUp := setup(t, name)
+	t.Cleanup(cleanUp)
+
+	dirPath := filepath.Join(tmpDir, "1")
+	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		t.Fatal(err)
 	}
 
-	file, cErr := os.Create("./tmp/1/file_to_cache.txt")
+	file, cErr := os.Create(filepath.Join(dirPath, "file_to_cache.txt"))
 	if cErr != nil {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1*1024*1024)
+	content := make([]byte, 1024)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
 
-	file.Sync()
-	file.Close()
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
 
-	if mkErr1 := os.MkdirAll("./tmp/1", 0755); mkErr1 != nil {
+	if mkErr1 := os.MkdirAll(dirPath, 0755); mkErr1 != nil {
 		t.Fatal(mkErr1)
 	}
 
-	file1, fErr1 := os.Create("./tmp/1/file1_to_cache.txt")
+	file1, fErr1 := os.Create(filepath.Join(dirPath, "file1_to_cache.txt"))
 	if fErr1 != nil {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1*1024*1024)
+	content = make([]byte, 1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -473,7 +518,7 @@ func TestRestoreWithFilesystem(t *testing.T) {
 	file1.Sync()
 	file1.Close()
 
-	plugin := newTestPlugin(backend.FileSystem, true, false, []string{"./tmp/1"}, "", "gzip")
+	plugin := newTestPlugin(name, backend.FileSystem, true, false, []string{dirPath}, "", "gzip")
 
 	if err := plugin.Exec(); err != nil {
 		t.Errorf("plugin (rebuild mode) exec failed, error: %v\n", err)
@@ -489,18 +534,18 @@ func TestRestoreWithFilesystem(t *testing.T) {
 		t.Errorf("plugin (restore mode) exec failed, error: %v\n", err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 
-	if _, err := os.Stat("./tmp/1/file1_to_cache.txt"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dirPath, "file1_to_cache.txt")); os.IsNotExist(err) {
 		t.Error(err)
 	}
 }
 
 // Helpers
 
-func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, archiveFmt string) Plugin {
+func newTestPlugin(bucket, backend string, rebuild, restore bool, mount []string, cacheKey, archiveFmt string) Plugin {
 	var logger log.Logger
 	if testing.Verbose() {
 		logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
@@ -522,7 +567,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 		Config: Config{
 			ArchiveFormat:    archiveFmt,
 			CompressionLevel: archive.DefaultCompressionLevel,
-			Backend:          bck,
+			Backend:          backend,
 			CacheKeyTemplate: cacheKey,
 			Mount:            mount,
 			Rebuild:          rebuild,
@@ -539,7 +584,7 @@ func newTestPlugin(bck string, rebuild, restore bool, mount []string, cacheKey, 
 				Endpoint:   endpoint,
 				Key:        accessKey,
 				PathStyle:  true, // Should be true for minio and false for AWS.
-				Region:     region,
+				Region:     defaultRegion,
 				Secret:     secretAccessKey,
 			},
 		},
@@ -554,37 +599,47 @@ func newMinioClient() (*minio.Client, error) {
 	return minioClient, nil
 }
 
-func setup(t *testing.T) {
+func setup(t *testing.T, name string) (string, func()) {
+	t.Log("Setting up")
+	// TODO: Should we create only one?
 	minioClient, err := newMinioClient()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("unexpectedly failed creating minioclient %v", err)
 	}
 
-	if err = minioClient.MakeBucket(bucket, region); err != nil {
-		t.Fatal(err)
+	t.Log("Creating bucket")
+	if err = minioClient.MakeBucket(name, defaultRegion); err != nil {
+		t.Fatalf("unexpectedly failed creating bucket <%s> %v", name, err)
+	}
+
+	t.Log("Creating directory")
+	tmpDir, err := ioutil.TempDir("", name+"-testdir-*")
+	if err != nil {
+		t.Fatalf("unexpectedly failed creating the temp dir: %v", err)
+	}
+
+	t.Log("Setup completed!")
+	return tmpDir, func() {
+		t.Log("Cleaning up")
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Fatalf("unexpectedly failed remove tmp dir <%s> %v", name, err)
+			t.Fatal(err)
+		}
+
+		// TODO: Tear down whole minio rather than cleaning each time!
+		t.Log("Removing all objects...")
+		if err = removeAllObjects(minioClient, name); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Log("Removing bucket...")
+		if err = minioClient.RemoveBucket(name); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
-func cleanUp(t *testing.T) {
-	if err := os.RemoveAll("./tmp"); err != nil {
-		t.Fatal(err)
-	}
-
-	minioClient, err := newMinioClient()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err = removeAllObjects(minioClient, bucket); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = minioClient.RemoveBucket(bucket); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func removeAllObjects(minioClient *minio.Client, bucketName string) error {
+func removeAllObjects(minioClient *minio.Client, bucket string) error {
 	objects := make(chan string)
 	errors := make(chan error)
 
@@ -592,7 +647,7 @@ func removeAllObjects(minioClient *minio.Client, bucketName string) error {
 		defer close(objects)
 		defer close(errors)
 
-		for object := range minioClient.ListObjects(bucketName, "", true, nil) {
+		for object := range minioClient.ListObjects(bucket, "", true, nil) {
 			if object.Err != nil {
 				errors <- object.Err
 			}
@@ -606,7 +661,7 @@ func removeAllObjects(minioClient *minio.Client, bucketName string) error {
 			if !open {
 				return nil
 			}
-			if err := minioClient.RemoveObject(bucketName, object); err != nil {
+			if err := minioClient.RemoveObject(bucket, object); err != nil {
 				return fmt.Errorf("remove all objects failed, %v", err)
 			}
 		case err, open := <-errors:

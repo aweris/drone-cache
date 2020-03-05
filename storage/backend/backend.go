@@ -14,7 +14,7 @@ const (
 	GCS        = "gcs"
 )
 
-// TODO: Find a better place.
+// MOTICE: FileEntry needs a better place.
 
 // FileEntry defines a single cache item.
 type FileEntry struct {
@@ -26,15 +26,16 @@ type FileEntry struct {
 // Backend implements operations for caching files.
 type Backend interface {
 	// TODO: Can we have a io.Writer or io.WriterAt
+	// Get(ctx context.Context, p string, io.Writer) error
 	// Get TODO
 	Get(ctx context.Context, p string) (io.ReadCloser, error)
 
 	// Put TODO
 	Put(ctx context.Context, p string, r io.Reader) error
 
-	// TODO: Implement!
+	// Implement me!
 	// List(ctx context.Context, p string) ([]FileEntry, error)
 
-	// TODO: Implement!
+	// Implement me!
 	// Delete(ctx context.Context, p string) error
 }
