@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"time"
+
 	"github.com/meltwater/drone-cache/storage/backend/azure"
 	"github.com/meltwater/drone-cache/storage/backend/filesystem"
 	"github.com/meltwater/drone-cache/storage/backend/gcs"
@@ -20,8 +22,9 @@ type Config struct {
 	Restore bool
 
 	// Optional
-	SkipSymlinks     bool
-	CompressionLevel int
+	SkipSymlinks            bool
+	CompressionLevel        int
+	StorageOperationTimeout time.Duration
 
 	Mount []string
 

@@ -36,7 +36,7 @@ func (c *cache) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 
 		level.Info(c.logger).Log("msg", "restoring directory", "local", src, "remote", dst)
 
-		wg.Add(1)
+		wg.Add(1) //nolint:gomnd
 
 		go func(dst, src string) {
 			defer wg.Done()

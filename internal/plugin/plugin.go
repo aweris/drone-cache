@@ -68,24 +68,22 @@ func (p *Plugin) Exec() error {
 		return fmt.Errorf("parse, <%s> as cache key template, falling back to default %w", cfg.CacheKeyTemplate, err)
 	}
 
-	// TODO: Refactor optional args. Just pass related configs. Are they optionaL?
-
-	// 2. Initialize storage.
-	storage, err := storage.FromConfig(p.logger, cfg.Backend,
-		backend.WithDebug(cfg.Debug),
-		backend.WithAzure(cfg.Azure),
-		backend.WithFileSystem(cfg.FileSystem),
-		backend.WithGCS(cfg.GCS),
-		backend.WithS3(cfg.S3),
-		backend.WithSFTP(cfg.SFTP),
-	)
+	// 2. Initialize storage backend.
+	b, err := backend.FromConfig(p.logger, cfg.Backend, backend.Config{
+		Debug:      cfg.Debug,
+		Azure:      cfg.Azure,
+		FileSystem: cfg.FileSystem,
+		GCS:        cfg.GCS,
+		S3:         cfg.S3,
+		SFTP:       cfg.SFTP,
+	})
 	if err != nil {
-		return fmt.Errorf("initialize, <%s> as backend %w", cfg.Backend, err)
+		return fmt.Errorf("initialize backend <%s> %w", cfg.Backend, err)
 	}
 
 	// 3. Initialize cache.
 	c := cache.New(p.logger,
-		storage,
+		storage.New(p.logger, b, cfg.StorageOperationTimeout),
 		archive.FromFormat(p.logger, cfg.ArchiveFormat,
 			archive.WithSkipSymlinks(cfg.SkipSymlinks),
 			archive.WithCompressionLevel(cfg.CompressionLevel),

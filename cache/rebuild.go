@@ -28,9 +28,10 @@ func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 		return fmt.Errorf("generate key %w", err)
 	}
 
-	var wg sync.WaitGroup
-
-	errs := make(chan error, len(srcs))
+	var (
+		wg   sync.WaitGroup
+		errs = make(chan error, len(srcs))
+	)
 
 	for _, src := range srcs {
 		if _, err := os.Stat(src); err != nil {
@@ -41,7 +42,7 @@ func (c *cache) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...stri
 
 		level.Info(c.logger).Log("msg", "rebuilding cache for directory", "local", src, "remote", dst)
 
-		wg.Add(1)
+		wg.Add(1) //nolint:gomnd
 
 		go func(dst, src string) {
 			defer wg.Done()

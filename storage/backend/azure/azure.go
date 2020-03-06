@@ -11,6 +11,9 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
+// DefaultBlobMaxRetryRequests TODO
+const DefaultBlobMaxRetryRequests = 4
+
 type azureBackend struct {
 	logger       log.Logger
 	cfg          Config

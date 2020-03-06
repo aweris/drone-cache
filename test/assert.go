@@ -1,3 +1,4 @@
+//nolint:gomnd
 package test
 
 import (
@@ -78,7 +79,7 @@ func Equals(tb testing.TB, want, got interface{}, v ...interface{}) {
 	}
 }
 
-// EqualDirs fails if the contents of given directories are not the same.
+//nolint:funlen // EqualDirs fails if the contents of given directories are not the same.
 func EqualDirs(tb testing.TB, dst string, src string, srcs []string) {
 	srcList := []string{}
 
@@ -124,13 +125,17 @@ func EqualDirs(tb testing.TB, dst string, src string, srcs []string) {
 		dst := dstList[i]
 
 		if isSymlink(src) {
+			// Alternative 1.
 			// dst, err = filepath.EvalSymlinks(dstList[i])
 			// if err != nil {
-			// 	tb.Fatalf("%s:%d: unexpected error, src path, link <%s>: %s\n", filepath.Base(file), line, dstList[i], err.Error())
+			// 	tb.Fatalf("%s:%d: unexpected error, src path, link <%s>: %s\n",
+			// filepath.Base(file), line, dstList[i], err.Error())
 			// }
+			// Alternative 2.
 			// src, err = os.Readlink(dstList[i])
 			// if err != nil {
-			// 	tb.Fatalf("%s:%d: unexpected error, src path, link <%s>: %s\n", filepath.Base(file), line, dstList[i], err.Error())
+			// 	tb.Fatalf("%s:%d: unexpected error, src path, link <%s>: %s\n",
+			// filepath.Base(file), line, dstList[i], err.Error())
 			// }
 			continue
 		}
@@ -141,20 +146,25 @@ func EqualDirs(tb testing.TB, dst string, src string, srcs []string) {
 		}
 
 		if isSymlink(dst) {
+			// Alternative 1.
 			// dst, err = filepath.EvalSymlinks(dstList[i])
 			// if err != nil {
-			// 	tb.Fatalf("%s:%d: unexpected error, dst path, link <%s>: %s\n", filepath.Base(file), line, dstList[i], err.Error())
+			// 	tb.Fatalf("%s:%d: unexpected error, dst path, link <%s>: %s\n",
+			// filepath.Base(file), line, dstList[i], err.Error())
 			// }
+			// Alternative 2.
 			// dst, err = os.Readlink(dstList[i])
 			// if err != nil {
-			// 	tb.Fatalf("%s:%d: unexpected error, dst path, link <%s>: %s\n", filepath.Base(file), line, dstList[i], err.Error())
+			// 	tb.Fatalf("%s:%d: unexpected error, dst path, link <%s>: %s\n",
+			// filepath.Base(file), line, dstList[i], err.Error())
 			// }
 			continue
 		}
 
 		gContent, err := ioutil.ReadFile(dst)
 		if err != nil {
-			tb.Fatalf("%s:%d: unexpected error, dst path <%s>: %s\n", filepath.Base(file), line, dstList[i], err.Error())
+			tb.Fatalf("%s:%d: unexpected error, dst path <%s>: %s\n",
+				filepath.Base(file), line, dstList[i], err.Error())
 		}
 
 		Equals(tb, wContent, gContent)
@@ -174,16 +184,8 @@ func isDir(path string) bool {
 
 func isSymlink(path string) bool {
 	_, err := os.Lstat(path)
+
 	return err == nil
-}
-
-func isRegular(path string) bool {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-
-	return fi.Mode().IsRegular()
 }
 
 func expand(src string) ([]string, error) {
@@ -199,6 +201,7 @@ func expand(src string) ([]string, error) {
 		}
 
 		paths = append(paths, path)
+
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("walking the path %q: %v", src, err)
@@ -209,14 +212,18 @@ func expand(src string) ([]string, error) {
 
 func relative(top string, paths []string) ([]string, error) {
 	result := make([]string, len(paths))
+
 	for _, p := range paths {
 		name := filepath.Base(p)
+
 		rel, err := filepath.Rel(top, filepath.Dir(p))
 		if err != nil {
 			return []string{}, fmt.Errorf("relative path %q: %q %v", p, rel, err)
 		}
+
 		name = filepath.Join(filepath.ToSlash(rel), name)
 		result = append(result, name)
 	}
+
 	return result, nil
 }

@@ -2,21 +2,16 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/meltwater/drone-cache/storage/backend"
-	"github.com/meltwater/drone-cache/storage/backend/azure"
-	"github.com/meltwater/drone-cache/storage/backend/filesystem"
-	"github.com/meltwater/drone-cache/storage/backend/gcs"
-	"github.com/meltwater/drone-cache/storage/backend/s3"
-	"github.com/meltwater/drone-cache/storage/backend/sftp"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 )
+
+const DefaultOperationTimeout = 30 * time.Second
 
 // Storage is a place that files can be written to and read from.
 type Storage interface {
@@ -33,57 +28,17 @@ type Storage interface {
 	Delete(p string) error
 }
 
-// FromConfig creates new Storage by initializing corresponding backend using given configuration.
-func FromConfig(l log.Logger, backedType string, cfgs ...backend.Config) (Storage, error) {
-	configs := backend.Configs{}
-
-	for _, c := range cfgs {
-		c.Apply(&configs)
-	}
-
-	var (
-		b   backend.Backend
-		err error
-	)
-
-	switch backedType {
-	case backend.Azure:
-		level.Warn(l).Log("msg", "using azure blob as backend")
-		b, err = azure.New(log.With(l, "backend", backend.Azure), configs.Azure)
-	case backend.S3:
-		level.Warn(l).Log("msg", "using aws s3 as backend")
-		b, err = s3.New(log.With(l, "backend", backend.S3), configs.S3, configs.Debug)
-	case backend.GCS:
-		level.Warn(l).Log("msg", "using gc storage as backend")
-		b, err = gcs.New(log.With(l, "backend", backend.GCS), configs.GCS)
-	case backend.FileSystem:
-		level.Warn(l).Log("msg", "using filesystem as backend")
-		b, err = filesystem.New(log.With(l, "backend", backend.FileSystem), configs.FileSystem)
-	case backend.SFTP:
-		level.Warn(l).Log("msg", "using sftp as backend")
-		b, err = sftp.New(log.With(l, "backend", backend.SFTP), configs.SFTP)
-	default:
-		return nil, errors.New("unknown backend")
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("initialize backend %w", err)
-	}
-
-	// TODO: Parametric timeout value from CLI.
-	// With defaults!
-	return newStorage(b, 5*time.Second), nil
-}
-
 // Default Storage implementation.
 type storage struct {
+	logger log.Logger
+
 	b       backend.Backend
 	timeout time.Duration
 }
 
-// newStorage create a new default storage.
-func newStorage(b backend.Backend, timeout time.Duration) *storage {
-	return &storage{b, timeout}
+// New create a new default storage.
+func New(l log.Logger, b backend.Backend, timeout time.Duration) Storage {
+	return &storage{l, b, timeout}
 }
 
 // Get writes contents of the given object with given key from remote storage to io.Writer.

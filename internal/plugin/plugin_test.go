@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/internal/metadata"
@@ -19,11 +20,12 @@ import (
 )
 
 const (
-	defaultEndpoint        = "127.0.0.1:9000"
-	defaultAccessKey       = "AKIAIOSFODNN7EXAMPLE"
-	defaultSecretAccessKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-	defaultRegion          = "eu-west-1"
-	useSSL                 = false
+	defaultEndpoint             = "127.0.0.1:9000"
+	defaultAccessKey            = "AKIAIOSFODNN7EXAMPLE"
+	defaultSecretAccessKey      = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+	defaultRegion               = "eu-west-1"
+	testStorageOperationTimeout = 5 * time.Second
+	useSSL                      = false
 )
 
 var (
@@ -565,13 +567,14 @@ func newTestPlugin(bucket, backend string, rebuild, restore bool, mount []string
 			},
 		},
 		Config: Config{
-			ArchiveFormat:    archiveFmt,
-			CompressionLevel: archive.DefaultCompressionLevel,
-			Backend:          backend,
-			CacheKeyTemplate: cacheKey,
-			Mount:            mount,
-			Rebuild:          rebuild,
-			Restore:          restore,
+			ArchiveFormat:           archiveFmt,
+			CompressionLevel:        archive.DefaultCompressionLevel,
+			Backend:                 backend,
+			CacheKeyTemplate:        cacheKey,
+			Mount:                   mount,
+			Rebuild:                 rebuild,
+			Restore:                 restore,
+			StorageOperationTimeout: testStorageOperationTimeout,
 
 			FileSystem: filesystem.Config{
 				CacheRoot: "../../tmp/testdata/cache",
@@ -601,7 +604,9 @@ func newMinioClient() (*minio.Client, error) {
 
 func setup(t *testing.T, name string) (string, func()) {
 	t.Log("Setting up")
-	// TODO: Should we create only one?
+	// Notice: There's a lot of room to improve here:
+	// - Tear down whole minio rather than cleaning each time!
+
 	minioClient, err := newMinioClient()
 	if err != nil {
 		t.Fatalf("unexpectedly failed creating minioclient %v", err)
@@ -625,8 +630,6 @@ func setup(t *testing.T, name string) (string, func()) {
 			t.Fatalf("unexpectedly failed remove tmp dir <%s> %v", name, err)
 			t.Fatal(err)
 		}
-
-		// TODO: Tear down whole minio rather than cleaning each time!
 		t.Log("Removing all objects...")
 		if err = removeAllObjects(minioClient, name); err != nil {
 			t.Fatal(err)
