@@ -14,10 +14,12 @@ If you want to learn more about the story behind `drone-cache`, you can read our
 
 ## Supported Storage Backends
 
-# TODO: Add minio and ceph
 * [AWS S3](https://aws.amazon.com/s3/)
   * [Configuration](#)
   * [Example](#)
+  * Other AWS API compatible stores:
+    * [Minio](https://min.io/)
+    * [Red Hat Ceph](https://www.redhat.com/en/technologies/storage/ceph)
 * [Azure Storage](https://azure.microsoft.com/en-us/services/storage/blobs/)
   * [Configuration](#)
   * [Example](#)

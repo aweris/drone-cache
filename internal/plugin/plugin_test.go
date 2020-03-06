@@ -52,7 +52,7 @@ func TestRebuild(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
@@ -100,7 +100,7 @@ func TestRebuildSkipSymlinks(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestRebuildWithCacheKey(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestRebuildWithGzip(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
@@ -214,7 +214,7 @@ func TestRebuildWithFilesystem(t *testing.T) {
 		t.Fatal(fErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
@@ -266,7 +266,7 @@ func TestRestore(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
@@ -281,7 +281,7 @@ func TestRestore(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1024)
+	content = make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -355,7 +355,7 @@ func TestRestoreWithCacheKey(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
@@ -373,7 +373,7 @@ func TestRestoreWithCacheKey(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1024)
+	content = make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -424,7 +424,7 @@ func TestRestoreWithGzip(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
@@ -442,7 +442,7 @@ func TestRestoreWithGzip(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1024)
+	content = make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -493,7 +493,7 @@ func TestRestoreWithFilesystem(t *testing.T) {
 		t.Fatal(cErr)
 	}
 
-	content := make([]byte, 1024)
+	content := make([]byte, 1*1024*1024)
 	if _, err := file.Write(content); err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +511,7 @@ func TestRestoreWithFilesystem(t *testing.T) {
 		t.Fatal(fErr1)
 	}
 
-	content = make([]byte, 1024)
+	content = make([]byte, 1*1024*1024)
 	rand.Read(content)
 	if _, err := file1.Write(content); err != nil {
 		t.Fatal(err)
@@ -630,6 +630,7 @@ func setup(t *testing.T, name string) (string, func()) {
 			t.Fatalf("unexpectedly failed remove tmp dir <%s> %v", name, err)
 			t.Fatal(err)
 		}
+
 		t.Log("Removing all objects...")
 		if err = removeAllObjects(minioClient, name); err != nil {
 			t.Fatal(err)

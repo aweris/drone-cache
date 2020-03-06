@@ -11,17 +11,6 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
-// Flusher TODO
-type Flusher interface {
-	// Flush TODO
-	Flush(src string) error
-}
-
-// Flush TODO
-func (c *cache) Flush(src string) error {
-	return nil
-}
-
 type flusher struct {
 	logger log.Logger
 
@@ -29,13 +18,13 @@ type flusher struct {
 	dirty func(backend.FileEntry) bool
 }
 
-// NewFlusher creates a new cache flusher.
-func NewFlusher(s storage.Storage, ttl time.Duration) Flusher {
-	return &flusher{store: s, dirty: IsExpired(ttl)}
+// newFlusher creates a new cache flusher.
+func newFlusher(logger log.Logger, s storage.Storage, ttl time.Duration) flusher {
+	return flusher{logger: logger, store: s, dirty: IsExpired(ttl)}
 }
 
 // Flush cleans the expired files from the cache.
-func (f *flusher) Flush(src string) error {
+func (f flusher) Flush(src string) error {
 	level.Info(f.logger).Log("msg", "Cleaning files", "src", src)
 
 	files, err := f.store.List(src)

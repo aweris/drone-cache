@@ -2,10 +2,9 @@
 package cache
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/key"
 	"github.com/meltwater/drone-cache/key/generator"
@@ -22,16 +21,28 @@ type Cache interface {
 	Flusher
 }
 
-// cache TODO default cache!
+// Rebuilder TODO
+type Rebuilder interface {
+	// Rebuild TODO
+	Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error
+}
+
+// Restorer TODO
+type Restorer interface {
+	// Restore TODO
+	Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...string) error
+}
+
+// Flusher TODO
+type Flusher interface {
+	// Flush TODO
+	Flush(src string) error
+}
+
 type cache struct {
-	logger log.Logger
-
-	a  archive.Archive
-	s  storage.Storage
-	g  key.Generator
-	fg key.Generator
-
-	namespace string
+	rebuilder
+	restorer
+	flusher
 }
 
 // New creates a new cache with given parameters.
@@ -43,41 +54,8 @@ func New(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generato
 	}
 
 	return &cache{
-		logger:    log.With(logger, "component", "cache"),
-		a:         a,
-		s:         s,
-		g:         g,
-		namespace: options.namespace,
-		fg:        options.fallbackGenerator,
+		newRebuilder(log.With(logger, "component", "rebuilder"), s, a, g, options.fallbackGenerator, options.namespace),
+		newRestorer(log.With(logger, "component", "restorer"), s, a, g, options.fallbackGenerator, options.namespace),
+		newFlusher(log.With(logger, "component", "flusher"), s, time.Hour),
 	}
-}
-
-// TODO: write a note to redirect traffic to related files??
-// or create struct and promote?
-
-// Helpers
-
-func (c *cache) generateKey(parts ...string) (string, error) {
-	key, err := c.g.Generate(parts...)
-	if err == nil {
-		return key, nil
-	}
-
-	if c.fg != nil {
-		level.Error(c.logger).Log("msg", "falling back to fallback key generator", "err", err)
-
-		key, err = c.fg.Generate(parts...)
-		if err == nil {
-			return key, nil
-		}
-	}
-
-	level.Error(c.logger).Log("msg", "falling back to default key generator", "err", err)
-
-	key, err = defaultGen.Generate(parts...)
-	if err != nil {
-		return "", fmt.Errorf("generate key %w", err)
-	}
-
-	return key, nil
 }
