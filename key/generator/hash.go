@@ -6,16 +6,18 @@ import (
 	"strings"
 )
 
-type hashGenerator struct {
+// Hash TODO
+type Hash struct {
 	defaultParts []string
 }
 
-func NewHash(defaultParts ...string) *hashGenerator {
-	return &hashGenerator{defaultParts: defaultParts}
+// NewHash TODO
+func NewHash(defaultParts ...string) *Hash {
+	return &Hash{defaultParts: defaultParts}
 }
 
 // Generate generates key from given parts or templates as parameter.
-func (h *hashGenerator) Generate(parts ...string) (string, error) {
+func (h *Hash) Generate(parts ...string) (string, error) {
 	key, err := hash(parts...)
 	if err != nil {
 		return "", fmt.Errorf("generate hash key for mounted %w", err)

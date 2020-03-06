@@ -14,7 +14,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type sftpBackend struct {
+// Backend TODO
+type Backend struct {
 	cacheRoot string
 	client    *sftp.Client
 }
@@ -22,7 +23,7 @@ type sftpBackend struct {
 // TODO: Utilize context!
 
 // New creates a new sFTP backend.
-func New(l log.Logger, c Config) (*sftpBackend, error) {
+func New(l log.Logger, c Config) (*Backend, error) {
 	sshClient, err := getSSHClient(c)
 	if err != nil {
 		return nil, err
@@ -35,11 +36,11 @@ func New(l log.Logger, c Config) (*sftpBackend, error) {
 
 	level.Debug(l).Log("msg", "sftp backend", "config", fmt.Sprintf("%#v", c))
 
-	return &sftpBackend{client: sftpClient, cacheRoot: c.CacheRoot}, nil
+	return &Backend{client: sftpClient, cacheRoot: c.CacheRoot}, nil
 }
 
 // Get returns an io.Reader for reading the contents of the file.
-func (s *sftpBackend) Get(ctx context.Context, path string) (io.ReadCloser, error) {
+func (s *Backend) Get(ctx context.Context, path string) (io.ReadCloser, error) {
 	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(s.cacheRoot, path)))
 	if err != nil {
 		return nil, fmt.Errorf("get the object %w", err)
@@ -49,7 +50,7 @@ func (s *sftpBackend) Get(ctx context.Context, path string) (io.ReadCloser, erro
 }
 
 // Put uploads the contents of the io.Reader.
-func (s *sftpBackend) Put(ctx context.Context, path string, src io.Reader) error {
+func (s *Backend) Put(ctx context.Context, path string, src io.Reader) error {
 	pathJoin := filepath.Join(s.cacheRoot, path)
 
 	dir := filepath.Dir(pathJoin)

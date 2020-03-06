@@ -17,13 +17,13 @@ const defaultFileMode = 0755
 
 // TODO: Utilize context!
 
-// filesystem is an file system implementation of the Backend.
-type filesystem struct {
+// Filesystem is an file system implementation of the Backend.
+type Filesystem struct {
 	cacheRoot string
 }
 
-// New creates a filesystem backend.
-func New(l log.Logger, c Config) (*filesystem, error) {
+// New creates a Filesystem backend.
+func New(l log.Logger, c Config) (*Filesystem, error) {
 	if strings.TrimRight(path.Clean(c.CacheRoot), "/") == "" {
 		return nil, fmt.Errorf("empty or root path given, <%s> as cache root, ", c.CacheRoot)
 	}
@@ -32,13 +32,13 @@ func New(l log.Logger, c Config) (*filesystem, error) {
 		return nil, fmt.Errorf("make sure volume is mounted, <%s> as cache root %w", c.CacheRoot, err)
 	}
 
-	level.Debug(l).Log("msg", "filesystem backend", "config", fmt.Sprintf("%#v", c))
+	level.Debug(l).Log("msg", "Filesystem backend", "config", fmt.Sprintf("%#v", c))
 
-	return &filesystem{cacheRoot: c.CacheRoot}, nil
+	return &Filesystem{cacheRoot: c.CacheRoot}, nil
 }
 
 // Get returns an io.Reader for reading the contents of the file.
-func (c *filesystem) Get(ctx context.Context, p string) (io.ReadCloser, error) {
+func (c *Filesystem) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
 	if err != nil {
 		return nil, fmt.Errorf("get the object %w", err)
@@ -48,7 +48,7 @@ func (c *filesystem) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 }
 
 // Put uploads the contents of the io.Reader.
-func (c *filesystem) Put(ctx context.Context, p string, src io.Reader) error {
+func (c *Filesystem) Put(ctx context.Context, p string, src io.Reader) error {
 	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
 	if err != nil {
 		return fmt.Errorf("build path %w", err)

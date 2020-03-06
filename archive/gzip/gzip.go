@@ -10,7 +10,8 @@ import (
 	"github.com/go-kit/kit/log"
 )
 
-type gzipArchive struct {
+// pArchive TODO
+type Archive struct {
 	logger log.Logger
 
 	compressionLevel int
@@ -18,12 +19,12 @@ type gzipArchive struct {
 }
 
 // New creates an archive that uses the .tar.gz file format.
-func New(logger log.Logger, skipSymlinks bool, compressionLevel int) *gzipArchive {
-	return &gzipArchive{logger, compressionLevel, skipSymlinks}
+func New(logger log.Logger, skipSymlinks bool, compressionLevel int) *Archive {
+	return &Archive{logger, compressionLevel, skipSymlinks}
 }
 
 // Create writes content of the given source to an archive, returns written bytes.
-func (a *gzipArchive) Create(srcs []string, w io.Writer) (int64, error) {
+func (a *Archive) Create(srcs []string, w io.Writer) (int64, error) {
 	gw, err := gzip.NewWriterLevel(w, a.compressionLevel)
 	if err != nil {
 		return 0, fmt.Errorf("create archive writer %w", err)
@@ -35,7 +36,7 @@ func (a *gzipArchive) Create(srcs []string, w io.Writer) (int64, error) {
 }
 
 // Extract reads content from the given archive reader and restores it to the destination, returns written bytes.
-func (a *gzipArchive) Extract(dst string, r io.Reader) (int64, error) {
+func (a *Archive) Extract(dst string, r io.Reader) (int64, error) {
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return 0, err

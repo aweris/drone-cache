@@ -12,7 +12,7 @@ func TestGenerate(t *testing.T) {
 	t.Parallel()
 
 	l := log.NewNopLogger()
-	g := MetadataGenerator{
+	g := Metadata{
 		logger: l,
 		data:   metadata.Metadata{Repo: metadata.Repo{Name: "RepoName"}},
 		funcMap: template.FuncMap{
@@ -53,7 +53,7 @@ func TestParseTemplate(t *testing.T) {
 	t.Parallel()
 
 	l := log.NewNopLogger()
-	g := MetadataGenerator{
+	g := Metadata{
 		logger: l,
 		data:   metadata.Metadata{Repo: metadata.Repo{Name: "RepoName"}},
 		funcMap: template.FuncMap{

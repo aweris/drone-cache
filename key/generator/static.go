@@ -2,12 +2,12 @@ package generator
 
 import "path/filepath"
 
-type staticGenerator struct{}
+type Static struct{}
 
-func NewStatic() *staticGenerator {
-	return &staticGenerator{}
+func NewStatic() *Static {
+	return &Static{}
 }
 
-func (s *staticGenerator) Generate(parts ...string) (string, error) {
+func (s *Static) Generate(parts ...string) (string, error) {
 	return filepath.Join(parts...), nil
 }

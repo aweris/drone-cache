@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/log"
+
 	"github.com/meltwater/drone-cache/archive/tar"
 	"github.com/meltwater/drone-cache/test"
 )
@@ -19,7 +20,7 @@ func TestCreate(t *testing.T) {
 
 	for _, tc := range []struct {
 		name    string
-		tgz     *gzipArchive
+		tgz     *Archive
 		srcs    []string
 		written int64
 		err     error
@@ -116,7 +117,7 @@ func TestExtract(t *testing.T) {
 
 	for _, tc := range []struct {
 		name        string
-		tgz         *gzipArchive
+		tgz         *Archive
 		archivePath string
 		srcs        []string
 		written     int64
@@ -192,7 +193,7 @@ func TestExtract(t *testing.T) {
 
 // Helpers
 
-func create(a *gzipArchive, srcs []string, dst string) (int64, error) {
+func create(a *Archive, srcs []string, dst string) (int64, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -221,7 +222,7 @@ func create(a *gzipArchive, srcs []string, dst string) (int64, error) {
 	return written, nil
 }
 
-func extract(a *gzipArchive, src string, dst string) (int64, error) {
+func extract(a *Archive, src string, dst string) (int64, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 

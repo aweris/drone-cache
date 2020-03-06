@@ -11,8 +11,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-// gcsBackend is an Cloud Storage implementation of the Backend.
-type gcsBackend struct {
+// Backend is an Cloud Storage implementation of the Backend.
+type Backend struct {
 	bucket     string
 	acl        string
 	encryption string
@@ -20,7 +20,7 @@ type gcsBackend struct {
 }
 
 // New creates a Google Cloud Storage backend.
-func New(l log.Logger, c Config) (*gcsBackend, error) {
+func New(l log.Logger, c Config) (*Backend, error) {
 	var opts []option.ClientOption
 	if c.APIKey != "" {
 		opts = append(opts, option.WithAPIKey(c.APIKey))
@@ -37,7 +37,7 @@ func New(l log.Logger, c Config) (*gcsBackend, error) {
 		return nil, err
 	}
 
-	return &gcsBackend{
+	return &Backend{
 		bucket:     c.Bucket,
 		acl:        c.ACL,
 		encryption: c.Encryption,
@@ -46,7 +46,7 @@ func New(l log.Logger, c Config) (*gcsBackend, error) {
 }
 
 // Get returns an io.Reader for reading the contents of the file.
-func (c *gcsBackend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
+func (c *Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	bkt := c.client.Bucket(c.bucket)
 	obj := bkt.Object(p)
 
@@ -58,7 +58,7 @@ func (c *gcsBackend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 }
 
 // Put uploads the contents of the io.Reader.
-func (c *gcsBackend) Put(ctx context.Context, p string, src io.Reader) error {
+func (c *Backend) Put(ctx context.Context, p string, src io.Reader) error {
 	bkt := c.client.Bucket(c.bucket)
 
 	obj := bkt.Object(p)

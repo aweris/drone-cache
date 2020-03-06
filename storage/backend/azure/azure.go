@@ -12,16 +12,22 @@ import (
 )
 
 // DefaultBlobMaxRetryRequests TODO
-const DefaultBlobMaxRetryRequests = 4
+const (
+	DefaultBlobMaxRetryRequests = 4
 
-type azureBackend struct {
+	defaultBufferSize = 3 * 1024 * 1024
+	defaultMaxBuffers = 4
+)
+
+// Backend TODO
+type Backend struct {
 	logger       log.Logger
 	cfg          Config
 	containerURL azblob.ContainerURL
 }
 
 // New creates an AzureBlob backend.
-func New(l log.Logger, c Config) (*azureBackend, error) {
+func New(l log.Logger, c Config) (*Backend, error) {
 	// 1. From the Azure portal, get your storage account name and key and set environment variables.
 	accountName, accountKey := c.AccountName, c.AccountKey
 	if len(accountName) == 0 || len(accountKey) == 0 {
@@ -57,11 +63,11 @@ func New(l log.Logger, c Config) (*azureBackend, error) {
 		level.Debug(l).Log("msg", "container already exists", "err", err)
 	}
 
-	return &azureBackend{logger: l, cfg: c, containerURL: containerURL}, nil
+	return &Backend{logger: l, cfg: c, containerURL: containerURL}, nil
 }
 
 // Get TODO
-func (c *azureBackend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
+func (c *Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	blobURL := c.containerURL.NewBlockBlobURL(p)
 
 	downloadResponse, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
@@ -75,7 +81,7 @@ func (c *azureBackend) Get(ctx context.Context, p string) (io.ReadCloser, error)
 }
 
 // Put uploads the contents of the io.Reader.
-func (c *azureBackend) Put(ctx context.Context, p string, src io.Reader) error {
+func (c *Backend) Put(ctx context.Context, p string, src io.Reader) error {
 	blobURL := c.containerURL.NewBlockBlobURL(p)
 
 	c.logger.Log("msg", "uploading the file with blob", "name", p)
@@ -84,8 +90,8 @@ func (c *azureBackend) Put(ctx context.Context, p string, src io.Reader) error {
 	// TODO: Test!
 	if _, err := azblob.UploadStreamToBlockBlob(ctx, src, blobURL,
 		azblob.UploadStreamToBlockBlobOptions{
-			BufferSize: 3 * 1024 * 1024,
-			MaxBuffers: 4,
+			BufferSize: defaultBufferSize,
+			MaxBuffers: defaultMaxBuffers,
 		},
 	); err != nil {
 		return fmt.Errorf("put the object %w", err)

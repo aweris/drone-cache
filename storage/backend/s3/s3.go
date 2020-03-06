@@ -15,7 +15,8 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
-type s3Backend struct {
+// Backend TODO
+type Backend struct {
 	bucket     string
 	acl        string
 	encryption string
@@ -23,7 +24,7 @@ type s3Backend struct {
 }
 
 // New creates an S3 backend.
-func New(l log.Logger, c Config, debug bool) (*s3Backend, error) {
+func New(l log.Logger, c Config, debug bool) (*Backend, error) {
 	awsConf := &aws.Config{
 		Region:           aws.String(c.Region),
 		Endpoint:         &c.Endpoint,
@@ -45,7 +46,7 @@ func New(l log.Logger, c Config, debug bool) (*s3Backend, error) {
 
 	client := s3.New(session.Must(session.NewSessionWithOptions(session.Options{})), awsConf)
 
-	return &s3Backend{
+	return &Backend{
 		bucket:     c.Bucket,
 		acl:        c.ACL,
 		encryption: c.Encryption,
@@ -54,7 +55,7 @@ func New(l log.Logger, c Config, debug bool) (*s3Backend, error) {
 }
 
 // Get returns an io.Reader for reading the contents of the file.
-func (c *s3Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
+func (c *Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 	// downloader := s3manager.NewDownloaderWithClient(c.client)
 	in := &s3.GetObjectInput{
 		Bucket: aws.String(c.bucket),
@@ -74,7 +75,7 @@ func (c *s3Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
 }
 
 // Put uploads the contents of the io.ReadSeeker.
-func (c *s3Backend) Put(ctx context.Context, p string, r io.Reader) error {
+func (c *Backend) Put(ctx context.Context, p string, r io.Reader) error {
 	uploader := s3manager.NewUploaderWithClient(c.client)
 	in := &s3manager.UploadInput{
 		Bucket: aws.String(c.bucket),

@@ -17,8 +17,8 @@ import (
 	"github.com/meltwater/drone-cache/internal/metadata"
 )
 
-// MetadataGenerator TODO: maybe not exported?
-type MetadataGenerator struct {
+// Metadata TODO: maybe not exported?
+type Metadata struct {
 	logger log.Logger
 
 	data    metadata.Metadata
@@ -26,8 +26,8 @@ type MetadataGenerator struct {
 }
 
 // NewMetadata creates a new Key Generator.
-func NewMetadata(logger log.Logger, data metadata.Metadata) *MetadataGenerator {
-	return &MetadataGenerator{
+func NewMetadata(logger log.Logger, data metadata.Metadata) *Metadata {
+	return &Metadata{
 		logger: logger,
 		data:   data,
 		funcMap: template.FuncMap{
@@ -40,7 +40,7 @@ func NewMetadata(logger log.Logger, data metadata.Metadata) *MetadataGenerator {
 }
 
 // Generate generates key from given template as parameter or fallbacks hash.
-func (g *MetadataGenerator) Generate(tmpls ...string) (string, error) {
+func (g *Metadata) Generate(tmpls ...string) (string, error) {
 	// NOTICE: for now only consume a single template which will be changed.
 	tmpl := tmpls[0]
 
@@ -52,7 +52,7 @@ func (g *MetadataGenerator) Generate(tmpls ...string) (string, error) {
 	return key, nil
 }
 
-func (g *MetadataGenerator) generateFromTemplate(tmpl string) (string, error) {
+func (g *Metadata) generateFromTemplate(tmpl string) (string, error) {
 	level.Info(g.logger).Log("msg", "using provided cache key template")
 
 	if tmpl == "" {
@@ -75,7 +75,7 @@ func (g *MetadataGenerator) generateFromTemplate(tmpl string) (string, error) {
 }
 
 // // Generate generates key from given template as parameter or fallbacks hash.
-// func (g *MetadataGenerator) Generate(tmpls ...string) (string, error) {
+// func (g *Metadata) Generate(tmpls ...string) (string, error) {
 // 	// NOTICE: for now only consume a single template which will be changed.
 // 	tmpl := tmpls[0]
 // 	key, err := g.generateFromTemplate(tmpl, path)
@@ -91,7 +91,7 @@ func (g *MetadataGenerator) generateFromTemplate(tmpl string) (string, error) {
 // 	return key, nil
 // }
 
-// func (g *MetadataGenerator) generateFromTemplate(tmpl string, path string) (string, error) {
+// func (g *Metadata) generateFromTemplate(tmpl string, path string) (string, error) {
 // 	level.Info(g.logger).Log("msg", "using provided cache key template")
 
 // 	if tmpl == "" {
@@ -114,7 +114,7 @@ func (g *MetadataGenerator) generateFromTemplate(tmpl string) (string, error) {
 // }
 
 // ParseTemplate parses template.
-func (g *MetadataGenerator) ParseTemplate(tmpl string) (*template.Template, error) {
+func (g *Metadata) ParseTemplate(tmpl string) (*template.Template, error) {
 	return template.New("cacheKey").Funcs(g.funcMap).Parse(tmpl)
 }
 

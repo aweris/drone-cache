@@ -21,19 +21,20 @@ var (
 	ErrArchiveNotReadable = errors.New("archive not readable")
 )
 
-type tarArchive struct {
+// Archive TODO
+type Archive struct {
 	logger log.Logger
 
 	skipSymlinks bool
 }
 
 // New creates an archive that uses the .tar file format.
-func New(logger log.Logger, skipSymlinks bool) *tarArchive {
-	return &tarArchive{logger, skipSymlinks}
+func New(logger log.Logger, skipSymlinks bool) *Archive {
+	return &Archive{logger, skipSymlinks}
 }
 
 // Create writes content of the given source to an archive, returns written bytes.
-func (a *tarArchive) Create(srcs []string, w io.Writer) (int64, error) {
+func (a *Archive) Create(srcs []string, w io.Writer) (int64, error) {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
@@ -52,6 +53,7 @@ func (a *tarArchive) Create(srcs []string, w io.Writer) (int64, error) {
 	return written, nil
 }
 
+//nolint: lll
 func writeToArchive(tw *tar.Writer, rootSrc string, skipSymlinks bool, written *int64) func(string, os.FileInfo, error) error {
 	return func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -129,11 +131,13 @@ func relativeName(src, path string) (string, error) {
 	}
 
 	name := filepath.Base(path)
+
 	if srcInfo.IsDir() {
 		dir, err := filepath.Rel(filepath.Dir(src), filepath.Dir(path))
 		if err != nil {
 			return "", fmt.Errorf("relative path %q: %q %v", path, dir, err)
 		}
+
 		name = filepath.Join(filepath.ToSlash(dir), name)
 	}
 
@@ -160,7 +164,7 @@ func isSymlink(fi os.FileInfo) bool {
 }
 
 // Extract reads content from the given archive reader and restores it to the destination, returns written bytes.
-func (a *tarArchive) Extract(dst string, r io.Reader) (int64, error) {
+func (a *Archive) Extract(dst string, r io.Reader) (int64, error) {
 	if _, err := os.Stat(dst); err != nil {
 		// NOTice: Consider creating non-existing root destination.
 		return 0, fmt.Errorf("make sure destination directory exists <%s>: %v, %w", dst, err, ErrDestinationNotReachable)

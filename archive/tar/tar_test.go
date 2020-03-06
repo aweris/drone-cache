@@ -17,7 +17,7 @@ func TestCreate(t *testing.T) {
 
 	for _, tc := range []struct {
 		name    string
-		ta      *tarArchive
+		ta      *Archive
 		srcs    []string
 		written int64
 		err     error
@@ -115,7 +115,7 @@ func TestExtract(t *testing.T) {
 
 	for _, tc := range []struct {
 		name        string
-		ta          *tarArchive
+		ta          *Archive
 		archivePath string
 		srcs        []string
 		written     int64
@@ -194,7 +194,7 @@ func TestExtract(t *testing.T) {
 
 // Helpers
 
-func create(a *tarArchive, srcs []string, dst string) (int64, error) {
+func create(a *Archive, srcs []string, dst string) (int64, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
@@ -223,7 +223,7 @@ func create(a *tarArchive, srcs []string, dst string) (int64, error) {
 	return written, nil
 }
 
-func extract(a *tarArchive, src string, dst string) (int64, error) {
+func extract(a *Archive, src string, dst string) (int64, error) {
 	pr, pw := io.Pipe()
 	defer pr.Close()
 
