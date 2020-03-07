@@ -61,5 +61,7 @@ the requirements below.
     $ git push --tags
     > ...
     ```
+6. Check whether all the generate artifacts in-place properly.
+7. Update [plugin index](https://github.com/drone/drone-plugin-index/blob/master/content/meltwater/drone-cache/index.md) using [DOCS](./DOCS.md).
 
 > **Keep in mind that users usually use the `latest` tagged images in their pipeline, please make sure you do not interfere with their working workflow.**
