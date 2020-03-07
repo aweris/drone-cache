@@ -19,7 +19,7 @@ steps:
   image: minio/mc:RELEASE.2018-09-26T00-42-43Z
   commands:
     - sleep 5
-    - mc config host add minio http://filestorage:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    - mc config host add minio http://minio:9000 AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
     - mc mb --region=eu-west-1 minio/drone-cache-bucket
 
 - name: build
@@ -36,7 +36,7 @@ steps:
   - go test -v -mod=vendor -cover -tags=integration ./...
   environment:
     CGO_ENABLED: 0
-    TEST_ENDPOINT: filestorage:9000
+    TEST_ENDPOINT: minio:9000
     TEST_SFTP_HOST: sftp
     TEST_AZURITE_URL: azurite:10000
   volumes:
@@ -51,36 +51,38 @@ steps:
   environment:
     CGO_ENABLED: 0
 
-- name: release-snapshot-dev
-  image: goreleaser/goreleaser:v0.120
-  commands:
-  - apk add --update make upx
-  - goreleaser release --rm-dist --snapshot
-  - echo "$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)" > .tags
-  environment:
-    GITHUB_TOKEN:
-      from_secret: github_token
+# NOTICE: Taking too much time, better to run only on master merge. Or find another way to get branch builds.
+# - name: release-snapshot-dev
+#   image: goreleaser/goreleaser:v0.120
+#   commands:
+#   - apk add --update make upx
+#   - goreleaser release --rm-dist --snapshot
+#   - echo "$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)" > .tags
+#   environment:
+#     GITHUB_TOKEN:
+#       from_secret: github_token
 
-- name: release-docker-dev
-  image: plugins/docker
-  settings:
-    build_args_from_env:
-    - BUILD_DATE
-    - DOCKERFILE_PATH
-    - VCS_REF
-    - VERSION
-    dockerfile: docker/Dockerfile.linux.386
-    environment:
-    - "BUILD_DATE=$(date -u +\"%Y-%m-%dT%H:%M:%S%Z\")"
-    - "DOCKERFILE_PATH=\"/docker/Dockerfile.linux.386\""
-    - VCS_REF=$(git rev-parse --short HEAD)
-    - VERSION=$(git describe --always --tags --dirty)
-    password:
-      from_secret: docker_password
-    repo: meltwater/drone-cache
-    tags: dev
-    username:
-      from_secret: docker_username
+# NOTICE: Taking too much time, better to run only on master merge. Or find another way to get branch builds.
+# - name: release-docker-dev
+#   image: plugins/docker
+#   settings:
+#     build_args_from_env:
+#     - BUILD_DATE
+#     - DOCKERFILE_PATH
+#     - VCS_REF
+#     - VERSION
+#     dockerfile: docker/Dockerfile.linux.386
+#     environment:
+#     - "BUILD_DATE=$(date -u +\"%Y-%m-%dT%H:%M:%S%Z\")"
+#     - "DOCKERFILE_PATH=\"/docker/Dockerfile.linux.386\""
+#     - VCS_REF=$(git rev-parse --short HEAD)
+#     - VERSION=$(git describe --always --tags --dirty)
+#     password:
+#       from_secret: docker_password
+#     repo: meltwater/drone-cache
+#     tags: dev
+#     username:
+#       from_secret: docker_username
 
 - name: rebuild-cache
   image: meltwater/drone-cache:dev
@@ -92,7 +94,7 @@ steps:
     rebuild: true
     region: eu-west-1
     path_style: true
-    endpoint: filestorage:9000
+    endpoint: minio:9000
     exit_code: true
   environment:
     AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
@@ -109,7 +111,7 @@ steps:
     rebuild: true
     region: eu-west-1
     path_style: true
-    endpoint: filestorage:9000
+    endpoint: minio:9000
     exit_code: true
   environment:
     AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
@@ -127,7 +129,7 @@ steps:
     rebuild: true
     region: eu-west-1
     path_style: true
-    endpoint: filestorage:9000
+    endpoint: minio:9000
     exit_code: true
   environment:
     AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
@@ -201,7 +203,7 @@ steps:
     pull: always
     restore: true
     path_style: true
-    endpoint: filestorage:9000
+    endpoint: minio:9000
     exit_code: true
   environment:
     AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
@@ -219,7 +221,7 @@ steps:
     region: eu-west-1
     restore: true
     path_style: true
-    endpoint: filestorage:9000
+    endpoint: minio:9000
     exit_code: true
   environment:
     AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
@@ -258,7 +260,7 @@ steps:
     region: eu-west-1
     restore: true
     path_style: true
-    endpoint: filestorage:9000
+    endpoint: minio:9000
     exit_code: true
   environment:
     AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
@@ -276,7 +278,7 @@ steps:
   - go test -v -mod=vendor -cover ./...
   environment:
     CGO_ENABLED: 0
-    TEST_ENDPOINT: filestorage:9000
+    TEST_ENDPOINT: minio:9000
     TEST_SFTP_HOST: sftp
     TEST_AZURITE_URL: azurite:10000
   volumes:
@@ -284,7 +286,7 @@ steps:
     path: /drone/src/tmp/testdata/cache
 
 services:
-- name: filestorage
+- name: minio
   image: minio/minio:RELEASE.2018-10-06T00-15-16Z
   commands:
   - minio server /data
