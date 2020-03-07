@@ -112,11 +112,7 @@ test-integration: $(GOTEST_BIN)
 
 .PHONY: test-unit
 test-unit: $(GOTEST_BIN)
-	docker-compose up -d
-	# Remove following step
-	mkdir -p ./tmp/testdata/cache
 	gotest -race -cover -benchmem -parallel=4 -v ./...
-	docker-compose down -v
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT_BIN)
