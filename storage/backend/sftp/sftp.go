@@ -20,8 +20,6 @@ type Backend struct {
 	client    *sftp.Client
 }
 
-// TODO: Utilize context!
-
 // New creates a new sFTP backend.
 func New(l log.Logger, c Config) (*Backend, error) {
 	sshClient, err := getSSHClient(c)
@@ -39,36 +37,67 @@ func New(l log.Logger, c Config) (*Backend, error) {
 	return &Backend{client: sftpClient, cacheRoot: c.CacheRoot}, nil
 }
 
-// Get returns an io.Reader for reading the contents of the file.
-func (s *Backend) Get(ctx context.Context, path string) (io.ReadCloser, error) {
-	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(s.cacheRoot, path)))
+// Get writes downloaded content to the given writer.
+func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
+	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(b.cacheRoot, p)))
 	if err != nil {
-		return nil, fmt.Errorf("get the object %w", err)
+		return fmt.Errorf("absolute path %w", err)
 	}
 
-	return s.client.Open(absPath)
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+
+		rc, err := b.client.Open(absPath)
+		if err != nil {
+			errCh <- fmt.Errorf("get the object %w", err)
+		}
+		defer rc.Close()
+
+		_, err = io.Copy(w, rc)
+		if err != nil {
+			errCh <- fmt.Errorf("copy the object %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
-// Put uploads the contents of the io.Reader.
-func (s *Backend) Put(ctx context.Context, path string, src io.Reader) error {
-	pathJoin := filepath.Join(s.cacheRoot, path)
+// Put uploads contents of the given reader.
+func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
 
-	dir := filepath.Dir(pathJoin)
-	if err := s.client.MkdirAll(dir); err != nil {
-		return fmt.Errorf("create directory <%s> %w", dir, err)
+		path := filepath.Clean(filepath.Join(b.cacheRoot, p))
+
+		dir := filepath.Dir(path)
+		if err := b.client.MkdirAll(dir); err != nil {
+			errCh <- fmt.Errorf("create directory <%s> %w", dir, err)
+		}
+
+		w, err := b.client.Create(path)
+		if err != nil {
+			errCh <- fmt.Errorf("create cache file <%s> %w", path, err)
+		}
+		defer w.Close()
+
+		if _, err := io.Copy(w, r); err != nil {
+			errCh <- fmt.Errorf("write contents of reader to a file %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-
-	dst, err := s.client.Create(pathJoin)
-	if err != nil {
-		return fmt.Errorf("create cache file <%s> %w", pathJoin, err)
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
-		return fmt.Errorf("write contents of reader to a file %w", err)
-	}
-
-	return nil
 }
 
 // Helpers

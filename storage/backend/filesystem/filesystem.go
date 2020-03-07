@@ -15,8 +15,6 @@ import (
 
 const defaultFileMode = 0755
 
-// TODO: Utilize context!
-
 // Filesystem is an file system implementation of the Backend.
 type Filesystem struct {
 	cacheRoot string
@@ -37,37 +35,68 @@ func New(l log.Logger, c Config) (*Filesystem, error) {
 	return &Filesystem{cacheRoot: c.CacheRoot}, nil
 }
 
-// Get returns an io.Reader for reading the contents of the file.
-func (c *Filesystem) Get(ctx context.Context, p string) (io.ReadCloser, error) {
-	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
+// Get writes downloaded content to the given writer.
+func (b *Filesystem) Get(ctx context.Context, p string, w io.Writer) error {
+	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(b.cacheRoot, p)))
 	if err != nil {
-		return nil, fmt.Errorf("get the object %w", err)
+		return fmt.Errorf("absolute path %w", err)
 	}
 
-	return os.Open(absPath)
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+
+		rc, err := os.Open(absPath)
+		if err != nil {
+			errCh <- fmt.Errorf("get the object %w", err)
+		}
+		defer rc.Close()
+
+		_, err = io.Copy(w, rc)
+		if err != nil {
+			errCh <- fmt.Errorf("copy the object %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
-// Put uploads the contents of the io.Reader.
-func (c *Filesystem) Put(ctx context.Context, p string, src io.Reader) error {
-	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(c.cacheRoot, p)))
+// Put uploads contents of the given reader.
+func (b *Filesystem) Put(ctx context.Context, p string, r io.Reader) error {
+	absPath, err := filepath.Abs(filepath.Clean(filepath.Join(b.cacheRoot, p)))
 	if err != nil {
 		return fmt.Errorf("build path %w", err)
 	}
 
-	dir := filepath.Dir(absPath)
-	if err := os.MkdirAll(dir, os.FileMode(defaultFileMode)); err != nil {
-		return fmt.Errorf("create directory <%s> %w", dir, err)
-	}
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
 
-	dst, err := os.Create(absPath)
-	if err != nil {
-		return fmt.Errorf("create cache file <%s> %w", absPath, err)
-	}
-	defer dst.Close()
+		dir := filepath.Dir(absPath)
+		if err := os.MkdirAll(dir, os.FileMode(defaultFileMode)); err != nil {
+			errCh <- fmt.Errorf("create directory <%s> %w", dir, err)
+		}
 
-	if _, err := io.Copy(dst, src); err != nil {
-		return fmt.Errorf("write contents of reader to a file %w", err)
-	}
+		w, err := os.Create(absPath)
+		if err != nil {
+			errCh <- fmt.Errorf("create cache file <%s> %w", absPath, err)
+		}
+		defer w.Close()
 
-	return nil
+		if _, err := io.Copy(w, r); err != nil {
+			errCh <- fmt.Errorf("write contents of reader to a file %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

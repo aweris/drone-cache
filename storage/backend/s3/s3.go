@@ -54,41 +54,51 @@ func New(l log.Logger, c Config, debug bool) (*Backend, error) {
 	}, nil
 }
 
-// Get returns an io.Reader for reading the contents of the file.
-func (c *Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
-	// downloader := s3manager.NewDownloaderWithClient(c.client)
+// Get writes downloaded content to the given writer.
+func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 	in := &s3.GetObjectInput{
-		Bucket: aws.String(c.bucket),
+		Bucket: aws.String(b.bucket),
 		Key:    aws.String(p),
 	}
 
-	out, err := c.client.GetObjectWithContext(ctx, in)
-	if err != nil {
-		return nil, fmt.Errorf("get the object %w", err)
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
+
+		out, err := b.client.GetObjectWithContext(ctx, in)
+		if err != nil {
+			errCh <- fmt.Errorf("get the object %w", err)
+		}
+		defer out.Body.Close()
+
+		_, err = io.Copy(w, out.Body)
+		if err != nil {
+			errCh <- fmt.Errorf("copy the object %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-
-	// if err := downloader.DownloadWithContext(ctx, io.WriterAt, in); err != nil {
-	// 	return nil, fmt.Errorf("get the object %w", err)
-	// }
-
-	return out.Body, nil
 }
 
-// Put uploads the contents of the io.ReadSeeker.
-func (c *Backend) Put(ctx context.Context, p string, r io.Reader) error {
-	uploader := s3manager.NewUploaderWithClient(c.client)
+// Put uploads contents of the given reader.
+func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
+	uploader := s3manager.NewUploaderWithClient(b.client)
 	in := &s3manager.UploadInput{
-		Bucket: aws.String(c.bucket),
+		Bucket: aws.String(b.bucket),
 		Key:    aws.String(p),
-		ACL:    aws.String(c.acl),
+		ACL:    aws.String(b.acl),
 		Body:   r,
 	}
 
-	if c.encryption != "" {
-		in.ServerSideEncryption = aws.String(c.encryption)
+	if b.encryption != "" {
+		in.ServerSideEncryption = aws.String(b.encryption)
 	}
 
-	// TODO: Test!!
 	if _, err := uploader.UploadWithContext(ctx, in); err != nil {
 		return fmt.Errorf("put the object %w", err)
 	}

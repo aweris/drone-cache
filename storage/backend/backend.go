@@ -18,11 +18,16 @@ import (
 )
 
 const (
+	// FileSystem type of the corresponding backend represented as string constant.
 	FileSystem = "filesystem"
-	S3         = "s3"
-	SFTP       = "sftp"
-	Azure      = "azure"
-	GCS        = "gcs"
+	// S3 type of the corresponding backend represented as string constant.
+	S3 = "s3"
+	// SFTP type of the corresponding backend represented as string constant.
+	SFTP = "sftp"
+	// Azure type of the corresponding backend represented as string constant.
+	Azure = "azure"
+	// GCS type of the corresponding backend represented as string constant.
+	GCS = "gcs"
 )
 
 // MOTICE: FileEntry needs a better place.
@@ -36,12 +41,10 @@ type FileEntry struct {
 
 // Backend implements operations for caching files.
 type Backend interface {
-	// TODO: Can we have a io.Writer or io.WriterAt
-	// Get(ctx context.Context, p string, io.Writer) error
-	// Get TODO
-	Get(ctx context.Context, p string) (io.ReadCloser, error)
+	// Get writes downloaded content to the given writer.
+	Get(ctx context.Context, p string, w io.Writer) error
 
-	// Put TODO
+	// Put uploads contents of the given reader.
 	Put(ctx context.Context, p string, r io.Reader) error
 
 	// Implement me!

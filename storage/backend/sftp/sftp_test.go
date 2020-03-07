@@ -47,11 +47,12 @@ func TestSFTPTruth(t *testing.T) {
 	_ = file.Close()
 
 	// GET TEST
-	readCloser, err := cli.Get(context.TODO(), "test3.t")
-	if err != nil {
+	var buf bytes.Buffer
+	if cli.Get(context.TODO(), "test3.t", &buf); err != nil {
 		t.Fatal(err)
 	}
-	b, _ := ioutil.ReadAll(readCloser)
+
+	b, _ := ioutil.ReadAll(&buf)
 	if !bytes.Equal(b, []byte(content)) {
 		t.Fatal(string(b), "!=", content)
 	}

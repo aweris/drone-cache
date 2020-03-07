@@ -21,7 +21,8 @@ const (
 
 // Backend TODO
 type Backend struct {
-	logger       log.Logger
+	logger log.Logger
+
 	cfg          Config
 	containerURL azblob.ContainerURL
 }
@@ -66,29 +67,45 @@ func New(l log.Logger, c Config) (*Backend, error) {
 	return &Backend{logger: l, cfg: c, containerURL: containerURL}, nil
 }
 
-// Get TODO
-func (c *Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
-	blobURL := c.containerURL.NewBlockBlobURL(p)
+// Get writes downloaded content to the given writer.
+func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
 
-	downloadResponse, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
-	if err != nil {
-		return nil, fmt.Errorf("get the object %w", err)
+		blobURL := b.containerURL.NewBlockBlobURL(p)
+
+		resp, err := blobURL.Download(ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+		if err != nil {
+			errCh <- fmt.Errorf("get the object %w", err)
+		}
+
+		rc := resp.Body(azblob.RetryReaderOptions{MaxRetryRequests: b.cfg.MaxRetryRequests})
+		defer rc.Close()
+
+		_, err = io.Copy(w, rc)
+		if err != nil {
+			errCh <- fmt.Errorf("copy the object %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-
-	bodyStream := downloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: c.cfg.MaxRetryRequests})
-
-	return bodyStream, nil
 }
 
-// Put uploads the contents of the io.Reader.
-func (c *Backend) Put(ctx context.Context, p string, src io.Reader) error {
-	blobURL := c.containerURL.NewBlockBlobURL(p)
+// Put uploads contents of the given reader.
+func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
+	blobURL := b.containerURL.NewBlockBlobURL(p)
 
-	c.logger.Log("msg", "uploading the file with blob", "name", p)
+	b.logger.Log("msg", "uploading the file with blob", "name", p)
 
 	// TODO: Check stream options!
 	// TODO: Test!
-	if _, err := azblob.UploadStreamToBlockBlob(ctx, src, blobURL,
+	if _, err := azblob.UploadStreamToBlockBlob(ctx, r, blobURL,
 		azblob.UploadStreamToBlockBlobOptions{
 			BufferSize: defaultBufferSize,
 			MaxBuffers: defaultMaxBuffers,

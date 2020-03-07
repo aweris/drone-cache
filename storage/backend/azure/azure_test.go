@@ -42,16 +42,19 @@ func TestAzureTruth(t *testing.T) {
 	}
 
 	// GET TEST
-	readCloser, err := b.Get(context.TODO(), "test_key")
-	if err != nil {
+	var buf bytes.Buffer
+	if err := b.Get(context.TODO(), "test_key", &buf); err != nil {
 		t.Fatal(err)
 	}
 
 	// Check the validity of returned bytes
-	readData, _ := ioutil.ReadAll(readCloser)
+	readData, err := ioutil.ReadAll(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if !bytes.Equal(readData, token) {
-		t.Fatal(string(readData), "!=", token)
+		t.Error(string(readData), "!=", token)
 	}
 }
 

@@ -13,6 +13,8 @@ import (
 
 // Backend is an Cloud Storage implementation of the Backend.
 type Backend struct {
+	logger log.Logger
+
 	bucket     string
 	acl        string
 	encryption string
@@ -34,10 +36,11 @@ func New(l log.Logger, c Config) (*Backend, error) {
 
 	client, err := gcstorage.NewClient(context.Background(), opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("gcs client initialization %w", err)
 	}
 
 	return &Backend{
+		logger:     l,
 		bucket:     c.Bucket,
 		acl:        c.ACL,
 		encryption: c.Encryption,
@@ -45,30 +48,65 @@ func New(l log.Logger, c Config) (*Backend, error) {
 	}, nil
 }
 
-// Get returns an io.Reader for reading the contents of the file.
-func (c *Backend) Get(ctx context.Context, p string) (io.ReadCloser, error) {
-	bkt := c.client.Bucket(c.bucket)
-	obj := bkt.Object(p)
+// Get writes downloaded content to the given writer.
+func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
 
-	if c.encryption != "" {
-		obj = obj.Key([]byte(c.encryption))
+		bkt := b.client.Bucket(b.bucket)
+		obj := bkt.Object(p)
+
+		if b.encryption != "" {
+			obj = obj.Key([]byte(b.encryption))
+		}
+
+		r, err := obj.NewReader(ctx)
+		if err != nil {
+			errCh <- fmt.Errorf("get the object %w", err)
+		}
+		defer r.Close()
+
+		_, err = io.Copy(w, r)
+		if err != nil {
+			errCh <- fmt.Errorf("copy the object %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-
-	return obj.NewReader(ctx)
 }
 
-// Put uploads the contents of the io.Reader.
-func (c *Backend) Put(ctx context.Context, p string, src io.Reader) error {
-	bkt := c.client.Bucket(c.bucket)
+// Put uploads contents of the given reader.
+func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
+	errCh := make(chan error)
+	go func() {
+		defer close(errCh)
 
-	obj := bkt.Object(p)
-	if c.encryption != "" {
-		obj = obj.Key([]byte(c.encryption))
+		bkt := b.client.Bucket(b.bucket)
+		obj := bkt.Object(p)
+
+		if b.encryption != "" {
+			obj = obj.Key([]byte(b.encryption))
+		}
+
+		w := obj.NewWriter(ctx)
+		defer w.Close()
+
+		_, err := io.Copy(w, r)
+		if err != nil {
+			errCh <- fmt.Errorf("copy the object %w", err)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-
-	w := obj.NewWriter(ctx)
-	defer w.Close() // TODO:
-	_, err := io.Copy(w, src)
-
-	return err
 }
