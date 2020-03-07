@@ -11,8 +11,8 @@ import (
 	"github.com/go-kit/kit/log/level"
 )
 
-// DefaultBlobMaxRetryRequests TODO
 const (
+	// DefaultBlobMaxRetryRequests TODO
 	DefaultBlobMaxRetryRequests = 4
 
 	defaultBufferSize = 3 * 1024 * 1024
@@ -30,24 +30,22 @@ type Backend struct {
 // New creates an AzureBlob backend.
 func New(l log.Logger, c Config) (*Backend, error) {
 	// 1. From the Azure portal, get your storage account name and key and set environment variables.
-	accountName, accountKey := c.AccountName, c.AccountKey
-	if len(accountName) == 0 || len(accountKey) == 0 {
+	if c.AccountName == "" || c.AccountKey == "" {
 		return nil, fmt.Errorf("either the AZURE_ACCOUNT_NAME or AZURE_ACCOUNT_KEY environment variable is not set")
 	}
 
 	// 2. Create a default request pipeline using your storage account name and account key.
-	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	credential, err := azblob.NewSharedKeyCredential(c.AccountName, c.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("azure, invalid credentials %w", err)
 	}
 
-	var azureBlobURL *url.URL
-
 	// 3. Azurite has different URL pattern than production Azure Blob Storage.
+	var blobURL *url.URL
 	if c.Azurite {
-		azureBlobURL, err = url.Parse(fmt.Sprintf("http://%s/%s/%s", c.BlobStorageURL, c.AccountName, c.ContainerName))
+		blobURL, err = url.Parse(fmt.Sprintf("http://%s/%s/%s", c.BlobStorageURL, c.AccountName, c.ContainerName))
 	} else {
-		azureBlobURL, err = url.Parse(fmt.Sprintf("https://%s.%s/%s", c.AccountName, c.BlobStorageURL, c.ContainerName))
+		blobURL, err = url.Parse(fmt.Sprintf("https://%s.%s/%s", c.AccountName, c.BlobStorageURL, c.ContainerName))
 	}
 
 	if err != nil {
@@ -55,13 +53,19 @@ func New(l log.Logger, c Config) (*Backend, error) {
 	}
 
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	containerURL := azblob.NewContainerURL(*azureBlobURL, pipeline)
+	containerURL := azblob.NewContainerURL(*blobURL, pipeline)
 
 	// 4. Always creating new container, it will throw error if it already exists.
 	_, err = containerURL.Create(context.Background(), azblob.Metadata{}, azblob.PublicAccessNone)
 	if err != nil {
-		// TODO: Check if we need to return the error.
-		level.Debug(l).Log("msg", "container already exists", "err", err)
+		ret, ok := err.(azblob.StorageError)
+		if !ok {
+			return nil, fmt.Errorf("azure, unexpected error %w", err)
+		}
+
+		if ret.ServiceCode() == "ContainerAlreadyExists" {
+			level.Error(l).Log("msg", "container already exists", "err", err)
+		}
 	}
 
 	return &Backend{logger: l, cfg: c, containerURL: containerURL}, nil
@@ -99,12 +103,9 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 
 // Put uploads contents of the given reader.
 func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
-	blobURL := b.containerURL.NewBlockBlobURL(p)
-
 	b.logger.Log("msg", "uploading the file with blob", "name", p)
 
-	// TODO: Check stream options!
-	// TODO: Test!
+	blobURL := b.containerURL.NewBlockBlobURL(p)
 	if _, err := azblob.UploadStreamToBlockBlob(ctx, r, blobURL,
 		azblob.UploadStreamToBlockBlobOptions{
 			BufferSize: defaultBufferSize,
