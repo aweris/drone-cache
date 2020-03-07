@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/meltwater/drone-cache/internal"
 )
 
 const (
@@ -72,7 +73,7 @@ func New(l log.Logger, c Config) (*Backend, error) {
 }
 
 // Get writes downloaded content to the given writer.
-func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
+func (b *Backend) Get(ctx context.Context, p string, w io.Writer) (err error) {
 	errCh := make(chan error)
 
 	go func() {
@@ -86,7 +87,7 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 		}
 
 		rc := resp.Body(azblob.RetryReaderOptions{MaxRetryRequests: b.cfg.MaxRetryRequests})
-		defer rc.Close()
+		defer internal.CloseWithErrLogf(b.logger, rc, "response body, close defer")
 
 		_, err = io.Copy(w, rc)
 		if err != nil {

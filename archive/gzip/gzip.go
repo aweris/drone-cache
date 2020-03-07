@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/meltwater/drone-cache/archive/tar"
+	"github.com/meltwater/drone-cache/internal"
 
 	"github.com/go-kit/kit/log"
 )
@@ -30,7 +31,7 @@ func (a *Archive) Create(srcs []string, w io.Writer) (int64, error) {
 		return 0, fmt.Errorf("create archive writer %w", err)
 	}
 
-	defer gw.Close()
+	defer internal.CloseWithErrLogf(a.logger, gw, "gzip writer")
 
 	return tar.New(a.logger, a.skipSymlinks).Create(srcs, gw)
 }
@@ -42,7 +43,7 @@ func (a *Archive) Extract(dst string, r io.Reader) (int64, error) {
 		return 0, err
 	}
 
-	defer gr.Close()
+	defer internal.CloseWithErrLogf(a.logger, gr, "gzip reader")
 
 	return tar.New(a.logger, a.skipSymlinks).Extract(dst, gr)
 }

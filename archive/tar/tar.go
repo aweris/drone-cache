@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-kit/kit/log"
+	"github.com/meltwater/drone-cache/internal"
 )
 
 var (
@@ -36,7 +37,7 @@ func New(logger log.Logger, skipSymlinks bool) *Archive {
 // Create writes content of the given source to an archive, returns written bytes.
 func (a *Archive) Create(srcs []string, w io.Writer) (int64, error) {
 	tw := tar.NewWriter(w)
-	defer tw.Close()
+	defer internal.CloseWithErrLogf(a.logger, tw, "tar writer")
 
 	var written int64
 
@@ -144,12 +145,13 @@ func relativeName(src, path string) (string, error) {
 	return name, nil
 }
 
-func writeFileToArchive(tw io.Writer, path string) (int64, error) {
+func writeFileToArchive(tw io.Writer, path string) (n int64, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return 0, fmt.Errorf("open file <%s> %w", path, err)
 	}
-	defer f.Close()
+
+	defer internal.CloseWithErrCapturef(&err, f, "write file to archive <%s>", path)
 
 	written, err := io.Copy(tw, f)
 	if err != nil {
@@ -239,7 +241,8 @@ func extractRegular(h *tar.Header, tr io.Reader, target string) (n int64, err er
 	if err != nil {
 		return 0, fmt.Errorf("open extracted file for writing <%s> %w", target, err)
 	}
-	defer f.Close()
+
+	defer internal.CloseWithErrCapturef(&err, f, "extract regular <%s>", target)
 
 	written, err := io.Copy(f, tr)
 	if err != nil {

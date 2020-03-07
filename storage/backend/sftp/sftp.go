@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/meltwater/drone-cache/internal"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -65,7 +66,8 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 		if err != nil {
 			errCh <- fmt.Errorf("get the object %w", err)
 		}
-		defer rc.Close()
+
+		defer internal.CloseWithErrLogf(b.logger, rc, "reader close defer")
 
 		_, err = io.Copy(w, rc)
 		if err != nil {
@@ -99,7 +101,8 @@ func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
 		if err != nil {
 			errCh <- fmt.Errorf("create cache file <%s> %w", path, err)
 		}
-		defer w.Close()
+
+		defer internal.CloseWithErrLogf(b.logger, w, "writer close defer")
 
 		if _, err := io.Copy(w, r); err != nil {
 			errCh <- fmt.Errorf("write contents of reader to a file %w", err)

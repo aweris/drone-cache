@@ -8,6 +8,7 @@ import (
 	gcstorage "cloud.google.com/go/storage"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/meltwater/drone-cache/internal"
 	"google.golang.org/api/option"
 )
 
@@ -66,7 +67,8 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 		if err != nil {
 			errCh <- fmt.Errorf("get the object %w", err)
 		}
-		defer r.Close()
+
+		defer internal.CloseWithErrLogf(b.logger, r, "response body, close defer")
 
 		_, err = io.Copy(w, r)
 		if err != nil {
@@ -97,7 +99,7 @@ func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
 		}
 
 		w := obj.NewWriter(ctx)
-		defer w.Close()
+		defer internal.CloseWithErrLogf(b.logger, w, "object writer, close defer")
 
 		_, err := io.Copy(w, r)
 		if err != nil {

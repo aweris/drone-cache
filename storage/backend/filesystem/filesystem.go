@@ -11,12 +11,15 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/meltwater/drone-cache/internal"
 )
 
 const defaultFileMode = 0755
 
 // Filesystem is an file system implementation of the Backend.
 type Filesystem struct {
+	logger log.Logger
+
 	cacheRoot string
 }
 
@@ -32,7 +35,7 @@ func New(l log.Logger, c Config) (*Filesystem, error) {
 
 	level.Debug(l).Log("msg", "Filesystem backend", "config", fmt.Sprintf("%#v", c))
 
-	return &Filesystem{cacheRoot: c.CacheRoot}, nil
+	return &Filesystem{logger: l, cacheRoot: c.CacheRoot}, nil
 }
 
 // Get writes downloaded content to the given writer.
@@ -51,7 +54,8 @@ func (b *Filesystem) Get(ctx context.Context, p string, w io.Writer) error {
 		if err != nil {
 			errCh <- fmt.Errorf("get the object %w", err)
 		}
-		defer rc.Close()
+
+		defer internal.CloseWithErrLogf(b.logger, rc, "response body, close defer")
 
 		_, err = io.Copy(w, rc)
 		if err != nil {
@@ -88,7 +92,8 @@ func (b *Filesystem) Put(ctx context.Context, p string, r io.Reader) error {
 		if err != nil {
 			errCh <- fmt.Errorf("create cache file <%s> %w", absPath, err)
 		}
-		defer w.Close()
+
+		defer internal.CloseWithErrLogf(b.logger, w, "file writer, close defer")
 
 		if _, err := io.Copy(w, r); err != nil {
 			errCh <- fmt.Errorf("write contents of reader to a file %w", err)

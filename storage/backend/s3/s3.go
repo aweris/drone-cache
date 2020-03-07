@@ -13,10 +13,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/meltwater/drone-cache/internal"
 )
 
 // Backend TODO
 type Backend struct {
+	logger log.Logger
+
 	bucket     string
 	acl        string
 	encryption string
@@ -47,6 +50,7 @@ func New(l log.Logger, c Config, debug bool) (*Backend, error) {
 	client := s3.New(session.Must(session.NewSessionWithOptions(session.Options{})), awsConf)
 
 	return &Backend{
+		logger:     l,
 		bucket:     c.Bucket,
 		acl:        c.ACL,
 		encryption: c.Encryption,
@@ -70,7 +74,8 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 		if err != nil {
 			errCh <- fmt.Errorf("get the object %w", err)
 		}
-		defer out.Body.Close()
+
+		defer internal.CloseWithErrLogf(b.logger, out.Body, "response body, close defer")
 
 		_, err = io.Copy(w, out.Body)
 		if err != nil {

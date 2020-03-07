@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/meltwater/drone-cache/archive"
+	"github.com/meltwater/drone-cache/internal"
 	"github.com/meltwater/drone-cache/key"
 	"github.com/meltwater/drone-cache/storage"
 )
@@ -43,7 +44,7 @@ func (r restorer) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...st
 
 	var (
 		wg   sync.WaitGroup
-		errs = &MultiError{}
+		errs = &internal.MultiError{}
 	)
 
 	for _, src := range srcs {
@@ -74,12 +75,12 @@ func (r restorer) Restore(srcs []string, keyTempl string, fallbackKeyTmpls ...st
 }
 
 // restore fetches the archived file from the cache and restores to the host machine's file system.
-func (r restorer) restore(dst, src string) error {
+func (r restorer) restore(dst, src string) (err error) {
 	pr, pw := io.Pipe()
-	defer pr.Close()
+	defer internal.CloseWithErrCapturef(&err, pr, "rebuild, pr close <%s>", src)
 
 	go func() {
-		defer pw.Close()
+		defer internal.CloseWithErrLogf(r.logger, pw, "pw close defer")
 
 		level.Info(r.logger).Log("msg", "downloading archived directory", "remote", dst, "local", src)
 

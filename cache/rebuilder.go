@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/meltwater/drone-cache/archive"
+	"github.com/meltwater/drone-cache/internal"
 	"github.com/meltwater/drone-cache/key"
 	"github.com/meltwater/drone-cache/storage"
 
@@ -46,7 +47,7 @@ func (r rebuilder) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...s
 
 	var (
 		wg   sync.WaitGroup
-		errs = &MultiError{}
+		errs = &internal.MultiError{}
 	)
 
 	for _, src := range srcs {
@@ -81,19 +82,19 @@ func (r rebuilder) Rebuild(srcs []string, keyTempl string, fallbackKeyTmpls ...s
 }
 
 // rebuild pushes the archived file to the cache.
-func (r rebuilder) rebuild(src, dst string) error {
-	src, err := filepath.Abs(filepath.Clean(src))
+func (r rebuilder) rebuild(src, dst string) (err error) {
+	src, err = filepath.Abs(filepath.Clean(src))
 	if err != nil {
 		return fmt.Errorf("clean source path %w", err)
 	}
 
 	pr, pw := io.Pipe()
-	defer pr.Close()
+	defer internal.CloseWithErrCapturef(&err, pr, "rebuild, pr close <%s>", src)
 
 	var written int64
 
 	go func(wrt *int64) {
-		defer pw.Close()
+		defer internal.CloseWithErrLogf(r.logger, pw, "pw close defer")
 
 		level.Info(r.logger).Log("msg", "archiving directory", "src", src)
 
