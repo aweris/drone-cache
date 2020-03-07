@@ -16,25 +16,37 @@ import (
 
 // Backend TODO
 type Backend struct {
+	logger log.Logger
+
 	cacheRoot string
 	client    *sftp.Client
 }
 
 // New creates a new sFTP backend.
 func New(l log.Logger, c Config) (*Backend, error) {
-	sshClient, err := getSSHClient(c)
+	authMethod, err := authMethod(c)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get ssh auth method %w", err)
 	}
 
-	sftpClient, err := sftp.NewClient(sshClient)
+	/* #nosec */
+	sshClient, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", c.Host, c.Port), &ssh.ClientConfig{
+		User:            c.Username,
+		Auth:            authMethod,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec TODO just a workaround for now, will fix
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to ssh %w", err)
+	}
+
+	client, err := sftp.NewClient(sshClient)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to ssh with sftp protocol %w", err)
 	}
 
 	level.Debug(l).Log("msg", "sftp backend", "config", fmt.Sprintf("%#v", c))
 
-	return &Backend{client: sftpClient, cacheRoot: c.CacheRoot}, nil
+	return &Backend{logger: l, client: client, cacheRoot: c.CacheRoot}, nil
 }
 
 // Get writes downloaded content to the given writer.
@@ -104,40 +116,16 @@ func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
 
 // Helpers
 
-// TODO: parameterize only what it actually needs
-func getSSHClient(c Config) (*ssh.Client, error) {
-	authMethod, err := getAuthMethod(c)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get ssh auth method %w", err)
-	}
-
-	/* #nosec */
-	client, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", c.Host, c.Port), &ssh.ClientConfig{
-		User:            c.Username,
-		Auth:            authMethod,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // #nosec just a workaround for now, will fix
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to ssh %w", err)
-	}
-
-	return client, nil
-}
-
-// TODO: parameterize only what it actually needs
-func getAuthMethod(c Config) ([]ssh.AuthMethod, error) {
-	if c.Auth.Method == SSHAuthMethodPassword {
-		return []ssh.AuthMethod{
-			ssh.Password(c.Auth.Password),
-		}, nil
-	} else if c.Auth.Method == SSHAuthMethodPublicKeyFile {
+func authMethod(c Config) ([]ssh.AuthMethod, error) {
+	switch c.Auth.Method {
+	case SSHAuthMethodPassword:
+		return []ssh.AuthMethod{ssh.Password(c.Auth.Password)}, nil
+	case SSHAuthMethodPublicKeyFile:
 		pkAuthMethod, err := readPublicKeyFile(c.Auth.PublicKeyFile)
-		return []ssh.AuthMethod{
-			pkAuthMethod,
-		}, err
+		return []ssh.AuthMethod{pkAuthMethod}, err
+	default:
+		return nil, errors.New("unknown ssh method (PASSWORD, PUBLIC_KEY_FILE)")
 	}
-
-	return nil, errors.New("ssh method auth is not recognized, should be PASSWORD or PUBLIC_KEY_FILE")
 }
 
 func readPublicKeyFile(file string) (ssh.AuthMethod, error) {
