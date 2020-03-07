@@ -22,7 +22,7 @@ func (me *MultiError) Error() string {
 	me.mu.Lock()
 	defer me.mu.Unlock()
 
-	if len(me.errs) > 1 {
+	if len(me.errs) > 1 { //nolint:gomnd
 		fmt.Fprintf(&buf, "%d errors: ", len(me.errs))
 	}
 

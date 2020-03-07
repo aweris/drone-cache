@@ -12,9 +12,9 @@ import (
 	"github.com/meltwater/drone-cache/key"
 	"github.com/meltwater/drone-cache/storage"
 
+	"github.com/dustin/go-humanize"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/dustin/go-humanize"
 )
 
 type rebuilder struct {
@@ -28,7 +28,8 @@ type rebuilder struct {
 	namespace string
 }
 
-func newRebuilder(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator, fg key.Generator, namespace string) rebuilder {
+// NewRebuilder TODO
+func NewRebuilder(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator, fg key.Generator, namespace string) Rebuilder { //nolint:lll
 	return rebuilder{logger, a, s, g, fg, namespace}
 }
 
@@ -127,7 +128,7 @@ func (r rebuilder) rebuild(src, dst string) error {
 		"remote", dst,
 		"archived bytes", humanize.Bytes(uint64(sw.written)),
 		"read bytes", humanize.Bytes(uint64(written)),
-		"ratio", fmt.Sprintf("%%%0.2f", float64(sw.written)/float64(written)*100.0),
+		"ratio", fmt.Sprintf("%%%0.2f", float64(sw.written)/float64(written)*100.0), //nolint:gomnd
 	)
 
 	return nil

@@ -62,6 +62,7 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 	}
 
 	errCh := make(chan error)
+
 	go func() {
 		defer close(errCh)
 
@@ -87,13 +88,15 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 
 // Put uploads contents of the given reader.
 func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
-	uploader := s3manager.NewUploaderWithClient(b.client)
-	in := &s3manager.UploadInput{
-		Bucket: aws.String(b.bucket),
-		Key:    aws.String(p),
-		ACL:    aws.String(b.acl),
-		Body:   r,
-	}
+	var (
+		uploader = s3manager.NewUploaderWithClient(b.client)
+		in       = &s3manager.UploadInput{
+			Bucket: aws.String(b.bucket),
+			Key:    aws.String(p),
+			ACL:    aws.String(b.acl),
+			Body:   r,
+		}
+	)
 
 	if b.encryption != "" {
 		in.ServerSideEncryption = aws.String(b.encryption)

@@ -25,7 +25,8 @@ type restorer struct {
 	namespace string
 }
 
-func newRestorer(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator, fg key.Generator, namespace string) restorer {
+// NewRestorer TODO
+func NewRestorer(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generator, fg key.Generator, namespace string) Restorer { //nolint:lll
 	return restorer{logger, a, s, g, fg, namespace}
 }
 

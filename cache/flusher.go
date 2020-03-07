@@ -18,8 +18,8 @@ type flusher struct {
 	dirty func(backend.FileEntry) bool
 }
 
-// newFlusher creates a new cache flusher.
-func newFlusher(logger log.Logger, s storage.Storage, ttl time.Duration) flusher {
+// NewFlusher creates a new cache flusher.
+func NewFlusher(logger log.Logger, s storage.Storage, ttl time.Duration) Flusher {
 	return flusher{logger: logger, store: s, dirty: IsExpired(ttl)}
 }
 

@@ -1,6 +1,6 @@
 package cache
 
-// statWriter implements io.Writer and keeps track of the writen bytes.
+// statWriter implements io.Writer and keeps track of the written bytes.
 type statWriter struct {
 	written int64
 }
@@ -8,5 +8,6 @@ type statWriter struct {
 func (s *statWriter) Write(p []byte) (n int, err error) {
 	size := len(p)
 	s.written += int64(size)
+
 	return size, nil
 }

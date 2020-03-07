@@ -40,9 +40,9 @@ type Flusher interface {
 }
 
 type cache struct {
-	rebuilder
-	restorer
-	flusher
+	Rebuilder
+	Restorer
+	Flusher
 }
 
 // New creates a new cache with given parameters.
@@ -54,8 +54,8 @@ func New(logger log.Logger, s storage.Storage, a archive.Archive, g key.Generato
 	}
 
 	return &cache{
-		newRebuilder(log.With(logger, "component", "rebuilder"), s, a, g, options.fallbackGenerator, options.namespace),
-		newRestorer(log.With(logger, "component", "restorer"), s, a, g, options.fallbackGenerator, options.namespace),
-		newFlusher(log.With(logger, "component", "flusher"), s, time.Hour),
+		NewRebuilder(log.With(logger, "component", "rebuilder"), s, a, g, options.fallbackGenerator, options.namespace),
+		NewRestorer(log.With(logger, "component", "restorer"), s, a, g, options.fallbackGenerator, options.namespace),
+		NewFlusher(log.With(logger, "component", "flusher"), s, time.Hour),
 	}
 }

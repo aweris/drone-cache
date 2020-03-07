@@ -51,6 +51,7 @@ func New(l log.Logger, c Config) (*Backend, error) {
 // Get writes downloaded content to the given writer.
 func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 	errCh := make(chan error)
+
 	go func() {
 		defer close(errCh)
 
@@ -84,6 +85,7 @@ func (b *Backend) Get(ctx context.Context, p string, w io.Writer) error {
 // Put uploads contents of the given reader.
 func (b *Backend) Put(ctx context.Context, p string, r io.Reader) error {
 	errCh := make(chan error)
+
 	go func() {
 		defer close(errCh)
 

@@ -43,6 +43,7 @@ func (b *Filesystem) Get(ctx context.Context, p string, w io.Writer) error {
 	}
 
 	errCh := make(chan error)
+
 	go func() {
 		defer close(errCh)
 
@@ -74,6 +75,7 @@ func (b *Filesystem) Put(ctx context.Context, p string, r io.Reader) error {
 	}
 
 	errCh := make(chan error)
+
 	go func() {
 		defer close(errCh)
 
