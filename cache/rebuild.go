@@ -8,11 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/meltwater/drone-cache/archive"
 	"github.com/meltwater/drone-cache/key"
 	"github.com/meltwater/drone-cache/storage"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+	"github.com/dustin/go-humanize"
 )
 
 type rebuilder struct {
@@ -123,8 +125,8 @@ func (r rebuilder) rebuild(src, dst string) error {
 		"msg", "archive created",
 		"local", src,
 		"remote", dst,
-		"archived bytes", sw.written,
-		"read bytes", written,
+		"archived bytes", humanize.Bytes(uint64(sw.written)),
+		"read bytes", humanize.Bytes(uint64(written)),
 		"ratio", fmt.Sprintf("%%%0.2f", float64(sw.written)/float64(written)*100.0),
 	)
 

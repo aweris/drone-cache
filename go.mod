@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.16.35
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
+	github.com/dustin/go-humanize v1.0.0
 	github.com/go-ini/ini v1.41.0 // indirect
 	github.com/go-kit/kit v0.9.0
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
