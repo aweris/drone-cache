@@ -31,11 +31,11 @@ build: main.go $(wildcard *.go) $(wildcard */*.go)
 
 .PHONY: release
 release: drone-cache $(GORELEASER_BIN)
-	goreleaser release --rm-dist
+	${GORELEASER_BIN} release --rm-dist
 
 .PHONY: snapshot
 snapshot: drone-cache $(GORELEASER_BIN)
-	goreleaser release --skip-publish --rm-dist --snapshot
+	${GORELEASER_BIN} release --skip-publish --rm-dist --snapshot
 
 .PHONY: clean
 clean:
@@ -47,13 +47,13 @@ tmp/help.txt: drone-cache
 	./drone-cache --help &> tmp/help.txt
 
 README.md: tmp/help.txt
-	embedmd -w README.md
+	${EMBEDMD_BIN} -w README.md
 
 tmp/docs.txt: drone-cache
 	@echo "IMPLEMENT ME"
 
 DOCS.md: tmp/docs.txt
-	embedmd -w DOCS.md
+	${EMBEDMD_BIN} -w DOCS.md
 
 docs: clean README.md DOCS.md ${LICHE_BIN}
 	@$(LICHE_BIN) --recursive docs --document-root .
@@ -66,6 +66,7 @@ vendor:
 
 .PHONY: compress
 compress: drone-cache
+	# Add as dependency
 	@upx drone-cache
 
 .PHONY: container
@@ -98,11 +99,19 @@ test: $(GOTEST_BIN)
 	docker-compose up -d
 	# Remove following step
 	mkdir -p ./tmp/testdata/cache
-	gotest -race -short -parallel=4 ./...
+	gotest -race -short -parallel=4 -tags=integration ./...
 	docker-compose down -v
 
-.PHONY: test-local
-test-local: $(GOTEST_BIN)
+.PHONY: test-integration
+test-integration: $(GOTEST_BIN)
+	docker-compose up -d
+	# Remove following step
+	mkdir -p ./tmp/testdata/cache
+	gotest -race -cover -parallel=4 -tags=integration -v ./...
+	docker-compose down -v
+
+.PHONY: test-unit
+test-unit: $(GOTEST_BIN)
 	docker-compose up -d
 	# Remove following step
 	mkdir -p ./tmp/testdata/cache

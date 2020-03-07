@@ -33,7 +33,7 @@ steps:
 - name: test
   image: golang:1.14-alpine
   commands:
-  - go test -v -mod=vendor -cover ./...
+  - go test -v -mod=vendor -cover -tags=integration ./...
   environment:
     CGO_ENABLED: 0
     TEST_ENDPOINT: filestorage:9000
